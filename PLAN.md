@@ -1,5 +1,11 @@
 # Plan: Convert WorkHours Prototype to Production App
 
+## Status
+- ✅ **Phase 1 complete** — Monolith split into Vite + ES modules (`src/client/`). App works identically with localStorage.
+- ✅ **Phase 2 complete** — Fastify backend + SQLite + auth (session cookies, bcrypt, invite flow) + all CRUD/matrix/weekly/export routes + seed + migrate scripts.
+- ✅ **Phase 3 complete** — Frontend fully connected to backend API. `saveState()` is a no-op; every mutation calls a specific endpoint. Login page + 401 redirect added.
+- 🔜 **Phase 4 next** — Deploy to DigitalOcean (PM2 + Nginx + SSL + cron backup).
+
 ## Context
 
 The current app is a **single `index.html` file** (~3,065 lines: 182 CSS, 26 HTML, 2,845 JS) that runs entirely in the browser with localStorage. It works but is fragile — data lives only in one browser, there's no auth, no backup, and the monolith is hard to maintain. We need to turn it into a real, deployable, multi-user application while keeping it lightweight.
