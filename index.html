@@ -1,0 +1,3064 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת ניהול שעות</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#da7756;--primary-dark:#c4614a;--primary-light:#fdf3f0;
+  --success:#16a34a;--success-bg:#f0fdf4;--warning:#b45309;--warning-bg:#fffbeb;
+  --danger:#dc2626;--danger-bg:#fef2f2;--info:#2563eb;
+  --bg:#f7f5f2;--surface:#ffffff;--surface-2:#f4f2ee;--border:#e5e1da;--border-2:#d4cfc7;
+  --text:#1a1917;--muted:#706f6c;--muted-2:#9c9894;
+  --sb-bg:#1a1917;--sb-text:#e8e4dd;--sb-muted:#8a8785;--sb-hover:rgba(255,255,255,.07);--sb-active:rgba(255,255,255,.12);
+  --topbar-h:54px;
+  --r:8px;--r-sm:6px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.12),0 4px 12px rgba(0,0,0,.06);
+}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased}
+#app{display:flex;flex-direction:column;min-height:100vh}
+#sidebar{width:100%;height:var(--topbar-h);background:var(--sb-bg);color:var(--sb-text);display:flex;flex-direction:row;align-items:center;position:fixed;top:0;right:0;left:0;z-index:100;padding:0 20px;gap:4px}
+#main{margin-top:var(--topbar-h);flex:1;overflow:auto}
+.page{padding:28px 24px;max-width:1500px}
+.s-logo{display:flex;align-items:center;gap:10px;padding:0 16px 0 0;border-left:1px solid rgba(255,255,255,.1);margin-left:4px;flex-shrink:0}
+.s-logo-icon{width:30px;height:30px;background:var(--primary);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.s-logo-t{font-weight:700;font-size:14px;color:var(--sb-text);letter-spacing:-.01em}.s-logo-s{font-size:11px;color:var(--sb-muted);margin-top:1px}
+.s-nav{display:flex;flex-direction:row;align-items:center;flex:1;gap:2px;padding:0 8px}
+.s-sec{display:none}
+.nav-item{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:var(--r-sm);cursor:pointer;color:var(--sb-muted);transition:all .15s;font-size:13px;font-weight:500;white-space:nowrap}
+.nav-item:hover{color:var(--sb-text);background:var(--sb-hover)}
+.nav-item.active{color:#fff;background:var(--sb-active)}
+.nav-item svg{flex-shrink:0;opacity:.8}
+.nav-item.active svg{opacity:1}
+.s-month{display:flex;align-items:center;gap:8px;padding:0 0 0 16px;border-right:1px solid rgba(255,255,255,.1);margin-right:4px;flex-shrink:0}
+.s-month label{font-size:12px;color:var(--sb-muted);white-space:nowrap}
+.s-month select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:var(--sb-text);border-radius:var(--r-sm);padding:5px 10px;font-size:13px;cursor:pointer;font-family:inherit;outline:none}
+.s-month select option{background:var(--sb-bg);color:var(--sb-text)}
+.s-month select:focus{border-color:rgba(218,119,86,.6)}
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow)}
+.card-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:600;color:var(--text)}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.kpi{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow);padding:18px;position:relative;overflow:hidden}
+.kpi-accent{position:absolute;top:0;right:0;width:3px;height:100%;border-radius:0 var(--r) var(--r) 0}
+.kpi.p .kpi-accent{background:var(--primary)}.kpi.s .kpi-accent{background:var(--success)}.kpi.w .kpi-accent{background:var(--warning)}.kpi.d .kpi-accent{background:var(--danger)}
+.kpi-lbl{font-size:12px;color:var(--muted);font-weight:500}
+.kpi-val{font-size:28px;font-weight:700;margin:8px 0 4px;line-height:1;color:var(--text);letter-spacing:-.02em}
+.kpi-sub{font-size:12px;color:var(--muted-2)}.kpi-ico{position:absolute;bottom:12px;left:14px;opacity:.07;color:var(--text)}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}
+.chart-title{font-size:13px;font-weight:600;margin-bottom:14px;color:var(--muted)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--surface-2);padding:10px 14px;font-size:12px;font-weight:600;color:var(--muted);text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.emp-hidden td{opacity:.4;background:var(--surface)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500}
+.b-ret{background:#eff6ff;color:#2563eb}.b-proj{background:#f0fdf4;color:#16a34a}.b-int{background:#faf5ff;color:#7c3aed}
+.b-ok{background:#f0fdf4;color:#16a34a}.b-warn{background:#fffbeb;color:#b45309}.b-danger{background:#fef2f2;color:#dc2626}.b-none{background:var(--surface-2);color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--r-sm);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .15s;font-family:inherit;line-height:1}
+.btn-p{background:var(--primary);color:#fff;border-color:var(--primary)}.btn-p:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
+.btn-s{background:var(--surface);color:var(--text);border-color:var(--border);box-shadow:var(--shadow)}.btn-s:hover{background:var(--surface-2);border-color:var(--border-2)}
+.btn-d{background:var(--danger-bg);color:var(--danger);border-color:#fecaca}.btn-d:hover{background:#fee2e2;border-color:#fca5a5}
+.btn-success{background:var(--success-bg);color:var(--success);border-color:#bbf7d0}.btn-success:hover{background:#dcfce7;border-color:#86efac}
+.btn-sm{padding:5px 10px;font-size:12px}
+.fg{margin-bottom:16px}.fl{display:block;font-size:12px;font-weight:500;margin-bottom:5px;color:var(--muted)}
+.fi,.fs{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s;background:var(--surface);color:var(--text);direction:rtl;font-family:inherit}
+.fi:focus,.fs:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(218,119,86,.15)}
+.fhint{font-size:11px;color:var(--muted-2);margin-top:4px}.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;animation:fIn .15s ease;backdrop-filter:blur(4px)}
+@keyframes fIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border-radius:12px;border:1px solid var(--border);width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:sUp .2s ease}
+@keyframes sUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-hd{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-t{font-size:16px;font-weight:600;color:var(--text)}.modal-bd{padding:20px 24px}
+.modal-ft{padding:14px 24px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.mcell{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;box-shadow:var(--shadow)}
+.mcell-lbl{background:var(--surface-2);padding:5px 8px;font-size:11px;color:var(--muted);font-weight:500;text-align:center;border-bottom:1px solid var(--border)}
+.mcell-inp{width:100%;border:none;outline:none;text-align:center;padding:7px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text);font-family:inherit}
+.mcell-inp:focus{background:var(--primary-light);color:var(--primary)}
+.apply-bar{display:flex;align-items:center;gap:10px;background:var(--warning-bg);border:1px solid #fde68a;border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px}
+.apply-bar input{width:80px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;text-align:center;font-weight:600;background:var(--surface);color:var(--text);font-family:inherit}
+.mx-layout{display:block}
+.mx-sidebar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;position:sticky;top:var(--topbar-h)}
+.mx-sidebar-title{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mx-sidebar-title span{font-size:11px;color:var(--muted-2);font-weight:400}
+.emp-check-item{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:var(--r-sm);cursor:pointer;font-size:13px;transition:background .1s}
+.emp-check-item:hover{background:var(--surface-2)}
+.emp-check-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--primary)}
+.emp-check-item.hidden-emp{color:var(--muted-2)}
+.mx-wrap{overflow:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);max-height:75vh;width:100%}
+.mx-tbl{border-collapse:collapse;width:100%}
+.mx-tbl th,.mx-tbl td{border:1px solid var(--border);white-space:nowrap}
+.mx-th-emp{background:var(--surface-2);padding:10px 14px;font-size:12px;font-weight:600;color:var(--muted);text-align:right;min-width:155px;position:sticky;right:0;z-index:10;border-left:2px solid var(--border-2)}
+.mx-th-c{background:var(--surface-2);padding:8px 10px;font-size:11px;font-weight:600;color:var(--muted);text-align:center;min-width:86px;max-width:108px}
+.mx-th-tot{background:var(--primary-light);padding:8px 10px;font-size:11px;font-weight:600;color:var(--primary);text-align:center;min-width:98px}
+.mx-td-emp{background:var(--surface-2);padding:10px 14px;font-size:13px;font-weight:600;position:sticky;right:0;z-index:5;border-left:2px solid var(--border-2)}
+.mx-inp{width:100%;min-width:78px;border:none;outline:none;text-align:center;padding:10px 5px;font-size:13px;background:transparent;cursor:pointer;color:var(--text);font-family:inherit}
+.mx-inp:focus{background:var(--primary-light);color:var(--primary)}
+.mx-inp:disabled{color:var(--border-2);cursor:default;background:transparent}
+.mx-td-tot{background:var(--primary-light);padding:10px 14px;font-size:13px;font-weight:700;color:var(--primary);text-align:center}
+.mx-td-tot.over{color:var(--danger);background:var(--danger-bg)}
+.mx-td-tot.ok{color:var(--success);background:var(--success-bg)}
+.mx-c-tot td{background:var(--surface-2);padding:8px 14px;font-size:12px;font-weight:700;text-align:center;color:var(--muted)}
+.emp-sub{font-size:11px;color:var(--muted-2);font-weight:400;margin-top:2px}
+.distributing .mx-inp{animation:pulse .4s ease}
+@keyframes pulse{0%{background:transparent}50%{background:rgba(218,119,86,.08)}100%{background:var(--primary-light)}}
+.mcell-billed{width:100%;border:none;outline:none;text-align:center;padding:4px 5px;font-size:12px;background:var(--warning-bg);color:var(--warning);border-top:1px solid #fde68a;font-family:inherit}
+.mcell-billed:focus{background:#fef3c7}
+.mcell-billed::placeholder{color:#d4a843;opacity:1}
+.bank-bar{display:flex;align-items:center;gap:8px;background:var(--success-bg);border:1px solid #bbf7d0;border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;flex-wrap:wrap}
+.pref-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm);padding:8px;margin-top:8px;background:var(--surface-2)}
+.pref-item{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px 6px;border-radius:var(--r-sm)}
+.pref-item:hover{background:var(--surface)}
+.pref-item input{width:13px;height:13px;cursor:pointer;accent-color:var(--primary);flex-shrink:0}
+.mx-emp-tot{font-size:11px;font-weight:600;background:var(--primary-light);padding:3px 8px;border-radius:999px;color:var(--primary);white-space:nowrap}
+.mx-emp-tot.over{background:var(--danger-bg);color:var(--danger)}
+.pb-wrap{background:var(--surface-2);border-radius:999px;height:6px;overflow:hidden;border:1px solid var(--border)}
+.pb{height:100%;border-radius:999px;transition:width .3s}
+.pb-s{background:var(--success)}.pb-w{background:var(--warning)}.pb-d{background:var(--danger)}.pb-i{background:var(--primary)}
+.progress{background:var(--surface-2);border-radius:999px;height:6px;overflow:hidden}
+.progress-bar{height:100%;border-radius:999px;transition:width .3s}
+.flex{display:flex}.items-c{align-items:center}.just-b{justify-content:space-between}.gap2{gap:8px}.gap3{gap:12px}
+.mt4{margin-top:16px}.mb4{margin-bottom:16px}
+.text-m{color:var(--muted)}.text-sm{font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500;background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
+.actions{display:flex;gap:4px}
+.page-hd{margin-bottom:24px}
+.page-title{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.page-sub{color:var(--muted);margin-top:4px;font-size:13px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.danger-text{color:var(--danger);font-weight:600}.warn-text{color:var(--warning);font-weight:600}
+.emp-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.emp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;display:flex;flex-direction:column}
+.emp-card.emp-card-hidden{opacity:.4}
+.emp-card-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:11px;border-bottom:1px solid var(--border);margin-bottom:11px}
+.emp-card-stat{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;color:var(--muted)}
+.emp-card-clients{flex:1;margin:8px 0;min-height:32px}
+.emp-card-client-row{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-radius:var(--r-sm);font-size:12px}
+.emp-card-client-row:nth-child(odd){background:var(--surface-2)}
+.emp-card-ft{display:flex;gap:4px;margin-top:11px;padding-top:9px;border-top:1px solid var(--border)}
+.weekly-emp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.weekly-days-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.weekly-day-cell{background:var(--surface-2);border-radius:var(--r-sm);padding:6px;min-height:64px;display:flex;flex-direction:column;gap:4px}
+::-webkit-scrollbar{width:7px;height:7px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted-2)}
+/* ── Insights page ── */
+.ins-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.ins-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.ins-section-hd{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.ins-section-icon{width:28px;height:28px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ins-section-title{font-size:13px;font-weight:600;color:var(--text)}
+.ins-section-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.ins-section-bd{padding:14px 18px}
+.ins-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+.ins-row:last-child{border-bottom:none}
+.ins-row-name{flex:1;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ins-row-val{font-size:12px;font-weight:600;white-space:nowrap}
+.ins-bar-wrap{flex:1;background:var(--surface-2);border-radius:999px;height:6px;overflow:hidden;border:1px solid var(--border)}
+.ins-bar{height:100%;border-radius:999px;transition:width .4s}
+.ins-alert{display:flex;align-items:flex-start;gap:9px;padding:9px 12px;border-radius:var(--r-sm);margin-bottom:8px;font-size:12.5px;line-height:1.5}
+.ins-alert:last-child{margin-bottom:0}
+.ins-alert.ok{background:var(--success-bg);border:1px solid #bbf7d0;color:#166534}
+.ins-alert.warn{background:var(--warning-bg);border:1px solid #fde68a;color:#92400e}
+.ins-alert.danger{background:var(--danger-bg);border:1px solid #fecaca;color:#991b1b}
+.ins-alert.info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a5f}
+.ins-alert-icon{flex-shrink:0;margin-top:1px}
+.ins-holiday-list{display:flex;flex-direction:column;gap:4px}
+.ins-holiday{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:var(--r-sm);font-size:12px}
+.ins-holiday.holiday{background:var(--danger-bg);color:#991b1b}
+.ins-holiday.eve{background:var(--warning-bg);color:#92400e}
+.ins-stat-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.ins-stat-row:last-child{border-bottom:none}
+.ins-stat-val{font-weight:600;font-size:14px}
+.ins-section-full{grid-column:1/-1}
+.ins-section-2{grid-column:span 2}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.chart-grid{grid-template-columns:1fr}.mx-layout{grid-template-columns:1fr}.ins-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="s-logo">
+      <div class="s-logo-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5V8l2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <div><div class="s-logo-t">WorkHours</div><div class="s-logo-s">ניהול שעות</div></div>
+    </div>
+    <div class="s-nav">
+      <div class="nav-item" id="nav-overview" onclick="navigate('overview')"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="1" width="5" height="2.5" rx="0.8" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="5" width="5" height="2.5" rx="0.8" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="9" width="5" height="2.5" rx="0.8" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="9" width="6" height="5" rx="1.2" stroke="currentColor" stroke-width="1.4"/></svg> מבט על</div>
+      <div class="nav-item" id="nav-clients" onclick="navigate('clients')"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 13V6l5.5-4 5.5 4v7" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/><rect x="5.5" y="8.5" width="2.5" height="4.5" rx="0.5" fill="currentColor"/><rect x="3" y="7" width="2" height="2" rx="0.4" fill="currentColor"/><rect x="10" y="7" width="2" height="2" rx="0.4" fill="currentColor"/></svg> לקוחות</div>
+      <div class="nav-item" id="nav-employees" onclick="navigate('employees')"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="5.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 13c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="11.5" cy="4.5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M13 13c0-2-1.2-3.2-3-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> עובדים</div>
+      <div class="nav-item" id="nav-matrix" onclick="navigate('matrix')"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7" y="1" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1" y="7" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="7" y="7" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1" y="13" width="4" height="1.5" rx="0.5" fill="currentColor"/><rect x="7" y="13" width="4" height="1.5" rx="0.5" fill="currentColor"/></svg> מטריצת הקצאות</div>
+      <div class="nav-item" id="nav-weekly" onclick="navigate('weekly')"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="3" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 1v4M10 1v4M1 7h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><rect x="3.5" y="9" width="2" height="2" rx="0.4" fill="currentColor"/><rect x="6.5" y="9" width="2" height="2" rx="0.4" fill="currentColor"/><rect x="9.5" y="9" width="2" height="2" rx="0.4" fill="currentColor"/></svg> סידור שבועי</div>
+      <div style="height:1px;background:var(--border);margin:6px 4px"></div>
+      <div class="nav-item" id="nav-settings" onclick="navigate('settings')"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 1.5v1.2M7.5 12.3v1.2M12.5 7.5h-1.2M3.7 7.5H2.5M10.95 4.05l-.85.85M4.9 10.1l-.85.85M10.95 10.95l-.85-.85M4.9 4.9l-.85-.85" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg> הגדרות</div>
+    </div>
+    <div class="s-month">
+      <label>חודש:</label>
+      <select id="month-select" onchange="onMonthChange(this.value)"></select>
+      <button class="btn btn-p btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="openNewMonthModal()"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> חודש חדש</button>
+    </div>
+  </nav>
+  <main id="main"><div id="page-content" class="page"></div></main>
+</div>
+<div id="modal-root"></div>
+
+<script>
+// ===================== CONSTANTS =====================
+const MONTHS=[
+  {key:'2026-01',label:'ינואר 2026',short:'ינואר'},{key:'2026-02',label:'פברואר 2026',short:'פבר׳'},
+  {key:'2026-03',label:'מרץ 2026',short:'מרץ'},{key:'2026-04',label:'אפריל 2026',short:'אפריל'},
+  {key:'2026-05',label:'מאי 2026',short:'מאי'},{key:'2026-06',label:'יוני 2026',short:'יוני'},
+  {key:'2026-07',label:'יולי 2026',short:'יולי'},{key:'2026-08',label:'אוגוסט 2026',short:'אוג׳'},
+  {key:'2026-09',label:'ספטמבר 2026',short:'ספט׳'},{key:'2026-10',label:'אוקטובר 2026',short:'אוק׳'},
+  {key:'2026-11',label:'נובמבר 2026',short:'נוב׳'},{key:'2026-12',label:'דצמבר 2026',short:'דצמ׳'},
+];
+
+// ===================== HEBREW CALENDAR ENGINE =====================
+function hIsLeap(y){return (7*y+1)%19<7;}
+function hElapsed(y){const m=Math.floor((235*y-234)/19),p=12084+13753*m;let d=m*29+Math.floor(p/25920);if((3*(d+1))%7<3)d++;return d;}
+function hYearLen(y){return hElapsed(y+1)-hElapsed(y);}
+function hMonLen(m,y){if([1,3,5,7,11].includes(m))return 30;if([2,4,6,10].includes(m))return 29;if(m===8)return hYearLen(y)%10===5?30:29;if(m===9)return hYearLen(y)%10===3?29:30;if(m===12)return hIsLeap(y)?30:29;if(m===13)return 29;return 0;}
+function hLastMon(y){return hIsLeap(y)?13:12;}
+function gFixed(y,m,d){const y1=y-1;return 365*y1+Math.floor(y1/4)-Math.floor(y1/100)+Math.floor(y1/400)+Math.floor((367*m-362)/12)+(m<=2?0:(y%4===0&&(y%100!==0||y%400===0)?-1:-2))+d;}
+function hFixed(hy,hm,hd){const epoch=-1373428;let f=epoch+hElapsed(hy)+hd-1;if(hm<7){for(let i=7;i<=hLastMon(hy);i++)f+=hMonLen(i,hy);for(let i=1;i<hm;i++)f+=hMonLen(i,hy);}else{for(let i=7;i<hm;i++)f+=hMonLen(i,hy);}return f;}
+function fixedToStr(f){let y=Math.floor((f-1)/365.2425)+1;while(gFixed(y+1,1,1)<=f)y++;while(gFixed(y,1,1)>f)y--;const isLeap=y%4===0&&(y%100!==0||y%400===0);const md=isLeap?[0,31,29,31,30,31,30,31,31,30,31,30,31]:[0,31,28,31,30,31,30,31,31,30,31,30,31];let rem=f-gFixed(y,1,1)+1,mo=1;while(mo<12&&rem>md[mo]){rem-=md[mo];mo++;}return`${y}-${String(mo).padStart(2,'0')}-${String(rem).padStart(2,'0')}`;}
+function hToStr(hy,hm,hd){return fixedToStr(hFixed(hy,hm,hd));}
+function fixedDow(f){return((f%7)+7)%7;}
+
+const _holidayCache={};
+function getHolidays(gYear){
+  if(_holidayCache[gYear])return _holidayCache[gYear];
+  const res={};
+  function add(s,name,type){if(s&&s.startsWith(String(gYear)))res[s]={name,type};}
+  [gYear+3760,gYear+3761].forEach(hy=>{
+    const adar=hIsLeap(hy)?13:12;
+    add(hToStr(hy,adar,13),'ערב פורים','eve');
+    add(hToStr(hy,adar,14),'פורים','holiday');
+    add(hToStr(hy,1,14),'ערב פסח','eve');
+    add(hToStr(hy,1,15),"פסח א'",'holiday');
+    add(hToStr(hy,1,21),"פסח ז'",'holiday');
+    // Yom HaAtzmaut with postponement rules
+    const atzF=hFixed(hy,2,5),dow=fixedDow(atzF);
+    const off=dow===6||dow===5?-2:dow===0?1:0;
+    add(fixedToStr(atzF+off-2),'ערב יום הזיכרון','eve');
+    add(fixedToStr(atzF+off-1),'יום הזיכרון','holiday');
+    add(fixedToStr(atzF+off),'יום העצמאות','holiday');
+    add(hToStr(hy,3,5),'ערב שבועות','eve');
+    add(hToStr(hy,3,6),'שבועות','holiday');
+    add(hToStr(hy,6,29),'ערב ראש השנה','eve');
+    add(hToStr(hy,7,1),'ראש השנה','holiday');
+    add(hToStr(hy,7,2),"ראש השנה ב'",'holiday');
+    add(hToStr(hy,7,9),'ערב יום כיפור','eve');
+    add(hToStr(hy,7,10),'יום כיפור','holiday');
+    add(hToStr(hy,7,14),'ערב סוכות','eve');
+    add(hToStr(hy,7,15),'סוכות','holiday');
+    add(hToStr(hy,7,21),'הושענא רבה','eve');
+    add(hToStr(hy,7,22),'שמיני עצרת','holiday');
+  });
+  _holidayCache[gYear]=res;
+  return res;
+}
+
+// ===================== STATE =====================
+let state={clients:[],employees:[],matrix:{},currentMonth:'2026-03'};
+
+function loadState(){
+  try{const s=localStorage.getItem('wh-state-v3');if(s){state=JSON.parse(s);}else{initDefaultData();}}
+  catch(e){initDefaultData();}
+  if(!state.monthSetup)state.monthSetup={};
+  if(!state.vacations)state.vacations={};
+  if(!state.weeklySchedule)state.weeklySchedule={};
+  if(!state.activeMonths){
+    const used=Object.keys(state.matrix||{}).filter(mk=>Object.keys(state.matrix[mk]||{}).length>0);
+    state.activeMonths=[...new Set([...used,state.currentMonth])].sort();
+  }
+}
+function saveState(){localStorage.setItem('wh-state-v3',JSON.stringify(state));}
+
+// ===================== WORKING DAYS (א-ה, ללא שישי/שבת) =====================
+function getWorkingDays(mk){
+  const[y,m]=mk.split('-').map(Number);
+  const last=new Date(y,m,0).getDate();
+  let c=0;
+  for(let d=1;d<=last;d++){const dow=new Date(y,m-1,d).getDay();if(dow!==5&&dow!==6)c++;}
+  return c;
+}
+function calcMonthWorkDays(mk){
+  const[y,m]=mk.split('-').map(Number);
+  const last=new Date(y,m,0).getDate();
+  let full=0,half=0,off=0;
+  for(let d=1;d<=last;d++){
+    const dow=new Date(y,m-1,d).getDay();
+    if(dow===5||dow===6)continue;
+    const key=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const h=getHolidays(y)[key];
+    if(!h)full++;
+    else if(h.type==='eve')half++;
+    else off++;
+  }
+  return{full,half,off,effective:full+half*0.5};
+}
+function calcAutoHours(mk){
+  if(state.monthSetup?.[mk]?.workDays!==undefined)return Math.round(state.monthSetup[mk].workDays*7);
+  return Math.round(calcMonthWorkDays(mk).effective*7);
+}
+function calcAutoHoursForEmp(emp,mk){
+  const scope=(emp.scope!=null?emp.scope:100)/100;
+  return Math.round(calcAutoHours(mk)*scope);
+}
+function getEmpHours(emp,mk){
+  const base=emp.monthlyHours?.[mk]!==undefined?emp.monthlyHours[mk]:calcAutoHoursForEmp(emp,mk);
+  const scope=(emp.scope!=null?emp.scope:100)/100;
+  const vacDays=(state.vacations?.[mk]?.[emp.id])||0;
+  return Math.max(0,base-Math.round(vacDays*7*scope));
+}
+// Project hours bank helpers
+function getRemainingBankBefore(client,mk){
+  const consumed=Object.entries(client.billedHours||{})
+    .filter(([m])=>m<mk)
+    .reduce((s,[,v])=>s+(parseFloat(v)||0),0);
+  return Math.max(0,(client.hoursBank||0)-consumed);
+}
+function getTotalBilled(client){
+  return Object.values(client.billedHours||{}).reduce((s,v)=>s+(parseFloat(v)||0),0);
+}
+// Client hours: respects project bank depletion
+function getClientHours(client,mk){
+  if(!client.monthlyHours)return 0;
+  const planned=client.monthlyHours[mk]!==undefined?client.monthlyHours[mk]
+    :(client.defaultHours!==undefined?client.defaultHours:0);
+  if(client.type==='project'&&client.hoursBank){
+    return Math.min(planned,getRemainingBankBefore(client,mk));
+  }
+  return planned;
+}
+
+// Helper: fill all months with a value for a client
+function fillAllMonths(client,val){
+  MONTHS.forEach(mo=>{client.monthlyHours[mo.key]=val;});
+}
+
+// ===================== DEFAULT DATA =====================
+function mkClientHours(v){
+  const mh={};MONTHS.forEach(mo=>{mh[mo.key]=v;});return mh;
+}
+function initDefaultData(){
+  state.clients=[
+    {id:'c1', name:'Honeydew',                  type:'retainer',monthlyHours:mkClientHours(65)},
+    {id:'c2', name:'Munters',                   type:'retainer',monthlyHours:mkClientHours(140)},
+    {id:'c3', name:'Maccabi',                   type:'retainer',monthlyHours:mkClientHours(200)},
+    {id:'c4', name:'Synch',                     type:'retainer',monthlyHours:mkClientHours(55)},
+    {id:'c5', name:'Databin',                   type:'retainer',monthlyHours:mkClientHours(25)},
+    {id:'c6', name:'Iguazio',                   type:'retainer',monthlyHours:mkClientHours(65)},
+    {id:'c7', name:'Natural Intelligence',       type:'retainer',monthlyHours:mkClientHours(80)},
+    {id:'c8', name:'ControlUp - Product',        type:'retainer',monthlyHours:mkClientHours(30)},
+    {id:'c9', name:'Jibe',                      type:'retainer',monthlyHours:mkClientHours(50)},
+    {id:'c10',name:'Prisma - Product + Dev DS',  type:'retainer',monthlyHours:mkClientHours(60)},
+    {id:'c11',name:'Guard.io',                  type:'retainer',monthlyHours:mkClientHours(0)},
+    {id:'c12',name:'Appsflyer DS + Design',      type:'retainer',monthlyHours:mkClientHours(45)},
+    {id:'c13',name:'MVS',                       type:'project', monthlyHours:mkClientHours(0)},
+    {id:'c14',name:'Elbit',                     type:'retainer',monthlyHours:mkClientHours(45)},
+    {id:'c15',name:'Claroty',                   type:'retainer',monthlyHours:mkClientHours(108)},
+    {id:'c16',name:'Fiverr',                    type:'project', monthlyHours:mkClientHours(10)},
+    {id:'c17',name:'Palo Alto',                 type:'retainer',monthlyHours:mkClientHours(60)},
+    {id:'c18',name:'Moonactive',                type:'project', monthlyHours:mkClientHours(10)},
+    {id:'c19',name:'ישראכרט',                   type:'project', monthlyHours:mkClientHours(0)},
+    {id:'c20',name:'Atera',                     type:'retainer',monthlyHours:mkClientHours(110)},
+    {id:'c21',name:'DS4DS + Tidy',              type:'project', monthlyHours:mkClientHours(0)},
+    {id:'c22',name:'Design Ops (Kido Ops)',      type:'retainer',monthlyHours:mkClientHours(0)},
+    {id:'c23',name:'Kido Learning',             type:'project', monthlyHours:mkClientHours(0)},
+  ];
+  state.employees=[
+    {id:'e1', name:'דינה',  role:'ניהול',visible:true,monthlyHours:{'2026-01':135,'2026-02':135,'2026-03':135}},
+    {id:'e2', name:'עמית',  role:'',     visible:true,monthlyHours:{}},
+    {id:'e3', name:'מעיין', role:'',     visible:true,monthlyHours:{}},
+    {id:'e4', name:'אביב',  role:'',     visible:true,monthlyHours:{'2026-01':142}},
+    {id:'e5', name:'אתי',   role:'',     visible:true,monthlyHours:{'2026-01':105,'2026-02':105,'2026-03':105}},
+    {id:'e6', name:'ארי',   role:'',     visible:true,monthlyHours:{}},
+    {id:'e7', name:'ליאורה',role:'',     visible:true,monthlyHours:{'2026-01':105,'2026-02':105,'2026-03':105}},
+    {id:'e8', name:'נועה',  role:'',     visible:true,monthlyHours:{'2026-01':130,'2026-02':130,'2026-03':130}},
+    {id:'e9', name:'אלעד',  role:'',     visible:true,monthlyHours:{}},
+    {id:'e10',name:'סנדרה', role:'',     visible:true,monthlyHours:{}},
+    {id:'e11',name:'שני',   role:'',     visible:true,monthlyHours:{}},
+    {id:'e12',name:'דימה',  role:'',     visible:true,monthlyHours:{'2026-01':90,'2026-02':90,'2026-03':90}},
+    {id:'e13',name:'אדיר',  role:'',     visible:true,monthlyHours:{'2026-01':136}},
+    {id:'e14',name:'קרן',   role:'',     visible:true,monthlyHours:{}},
+    {id:'e15',name:'עידו',  role:'',     visible:true,monthlyHours:{}},
+  ];
+  state.matrix={
+    '2026-01':{
+      'e1':{c1:20},'e2':{c9:60,c4:40},'e3':{c3:50,c6:30,c7:30,c10:15},
+      'e4':{c6:20},'e5':{c3:30,c7:20,c12:30},'e6':{c2:50,c3:50,c7:50},
+      'e7':{c2:30,c3:50,c5:20,c9:5},'e8':{c17:50,c20:80},'e9':{c1:20,c9:30,c10:30},
+      'e10':{c1:40,c5:10,c12:100},'e11':{c2:15,c4:40,c6:50,c9:20},
+      'e12':{c15:90},'e13':{c14:45,c15:18,c20:30},'e14':{},'e15':{},
+    }
+  };
+  state.currentMonth='2026-03';
+  saveState();
+}
+
+// ===================== ROUTER =====================
+let currentPage='overview';
+let _chartInstances={};
+let _showAll=false;
+let _clientShowInactive=true;
+let _empView='table';
+let _matrixView='table';
+let _empEditReturnId=null;
+let _matrixFocusEmp=null;
+let _weeklyWeekIdx=0;
+
+function navigate(page){
+  currentPage=page;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const nav=document.getElementById('nav-'+page);
+  if(nav)nav.classList.add('active');
+  renderPage();
+}
+function onMonthChange(v){state.currentMonth=v;_matrixFocusEmp=null;saveState();renderPage();}
+
+function renderPage(){
+  Object.values(_chartInstances).forEach(ch=>{try{ch.destroy();}catch(e){}});
+  _chartInstances={};
+  const el=document.getElementById('page-content');
+  if(currentPage==='overview'){el.innerHTML=renderOverview();setTimeout(initCharts,50);}
+  else if(currentPage==='clients')el.innerHTML=renderClients();
+  else if(currentPage==='employees')el.innerHTML=renderEmployees();
+  else if(currentPage==='matrix')el.innerHTML=renderMatrix();
+  else if(currentPage==='weekly')el.innerHTML=renderWeeklySchedule();
+  else if(currentPage==='settings')el.innerHTML=renderSettings();
+}
+
+// ===================== AGGREGATIONS =====================
+function getTotalAllocated(mk){
+  const activeCids=new Set(state.clients.filter(c=>c.active!==false).map(c=>c.id));
+  return Object.values(state.matrix[mk]||{}).reduce((s,ed)=>s+Object.entries(ed).reduce((a,[cid,v])=>a+(activeCids.has(cid)?parseFloat(v)||0:0),0),0);
+}
+function getClientAllocated(cid,mk){
+  return Object.values(state.matrix[mk]||{}).reduce((s,ed)=>s+(parseFloat(ed[cid])||0),0);
+}
+function getEmpAllocated(eid,mk){
+  const activeCids=new Set(state.clients.filter(c=>c.active!==false).map(c=>c.id));
+  return Object.entries((state.matrix[mk]||{})[eid]||{}).reduce((s,[cid,v])=>s+(activeCids.has(cid)?parseFloat(v)||0:0),0);
+}
+function getEmpActiveClients(eid,mk){
+  const activeCids=new Set(state.clients.filter(c=>c.active!==false).map(c=>c.id));
+  return Object.keys((state.matrix[mk]||{})[eid]||{}).filter(cid=>activeCids.has(cid)&&(parseFloat(((state.matrix[mk]||{})[eid]||{})[cid])||0)>0).length;
+}
+
+// ===================== OVERVIEW (merged dashboard + insights) =====================
+function renderOverview(){
+  const mk=state.currentMonth;
+  const [yr,mo]=mk.split('-').map(Number);
+  const ml=mkLabel(mk);
+  const activeEmps=state.employees.filter(e=>!e.hidden);
+  const visEmps=state.employees.filter(e=>e.visible!==false).length;
+  const visClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+
+  // ── Totals ──
+  const totalC=state.clients.filter(c=>c.active!==false).reduce((s,c)=>s+(getClientHours(c,mk)||0),0);
+  const totalCap=activeEmps.reduce((s,e)=>s+getEmpHours(e,mk),0);
+  const totalAlloc=getTotalAllocated(mk);
+  const utilPct=totalCap>0?Math.round(totalAlloc/totalCap*100):0;
+  const gap=totalCap-totalC;
+  const capColor=utilPct>100?'var(--danger)':utilPct>=80?'var(--success)':utilPct>=50?'var(--warning)':'var(--muted)';
+
+  // ── Work days & holidays ──
+  const wd=calcMonthWorkDays(mk);
+  const holidays=getHolidays(yr);
+  const monthHols=Object.entries(holidays).filter(([d])=>d.startsWith(mk)).sort(([a],[b])=>a.localeCompare(b));
+  const hoursLost=Math.round(wd.off*7+wd.half*3.5);
+
+  // ── Employee utilization ──
+  const empUtils=activeEmps.map(e=>{
+    const cap=getEmpHours(e,mk),alloc=getEmpAllocated(e.id,mk);
+    const pct=cap>0?Math.round(alloc/cap*100):0;
+    const vac=(state.vacations?.[mk]?.[e.id])||0;
+    return{e,cap,alloc,pct,vac};
+  }).sort((a,b)=>b.pct-a.pct);
+
+  // ── Client coverage ──
+  const clientCov=visClients.map(c=>{
+    const planned=getClientHours(c,mk),alloc=getClientAllocated(c.id,mk);
+    const pct=planned>0?Math.round(alloc/planned*100):null;
+    return{c,planned,alloc,pct};
+  }).filter(x=>x.planned>0).sort((a,b)=>(a.pct??0)-(b.pct??0));
+
+  // ── Vacations ──
+  const vacData=activeEmps.map(e=>({e,days:(state.vacations?.[mk]?.[e.id])||0})).filter(x=>x.days>0).sort((a,b)=>b.days-a.days);
+  const totalVacDays=vacData.reduce((s,x)=>s+x.days,0);
+
+  // ── Project bank ──
+  const projAlerts=state.clients.filter(c=>c.active!==false&&c.type==='project'&&c.hoursBank).map(c=>{
+    const totalBilled=getTotalBilled(c);
+    const pct=c.hoursBank>0?Math.round(totalBilled/c.hoursBank*100):0;
+    return{c,remaining:getRemainingBankBefore(c,mk),pct,totalBilled};
+  }).sort((a,b)=>a.pct-b.pct);
+
+  // ── Alerts ──
+  const alerts=[];
+  const over=empUtils.filter(x=>x.pct>100);
+  const under=empUtils.filter(x=>x.pct<50&&x.cap>0);
+  const noAlloc=empUtils.filter(x=>x.alloc===0&&x.cap>0);
+  if(over.length)alerts.push({type:'danger',icon:'⚡',text:`${over.map(x=>x.e.name).join(', ')} — מוקצים מעל קיבולת (${over.map(x=>x.pct+'%').join(', ')})`});
+  if(noAlloc.length)alerts.push({type:'warn',icon:'○',text:`${noAlloc.map(x=>x.e.name).join(', ')} — אין הקצאות לחודש`});
+  if(under.length&&!noAlloc.find(x=>under.find(y=>y.e.id===x.e.id)))alerts.push({type:'info',icon:'↓',text:`${under.map(x=>x.e.name).join(', ')} — ניצולת נמוכה (מתחת ל-50%)`});
+  const uncoveredClients=clientCov.filter(x=>x.alloc===0);
+  if(uncoveredClients.length)alerts.push({type:'warn',icon:'!',text:`לקוחות ללא כיסוי: ${uncoveredClients.map(x=>x.c.name).join(', ')}`});
+  const lowBank=projAlerts.filter(x=>x.remaining<20&&x.remaining>0);
+  if(lowBank.length)alerts.push({type:'danger',icon:'⚠',text:`בנק שעות נמוך: ${lowBank.map(x=>`${x.c.name} (נותר ${x.remaining}h)`).join(', ')}`});
+  if(utilPct>=90&&utilPct<=100)alerts.push({type:'ok',icon:'✓',text:`ניצולת מצוינת — ${utilPct}% מהקיבולת מנוצלת`});
+  if(hoursLost>0)alerts.push({type:'info',icon:'📅',text:`${monthHols.filter(([,v])=>v.type==='holiday').length} חגים החודש — ${hoursLost}h נגרעות מהקיבולת`});
+  if(totalVacDays>0)alerts.push({type:'info',icon:'🏖',text:`סה״כ ${totalVacDays} ימי חופשה לצוות`});
+  if(!alerts.length)alerts.push({type:'ok',icon:'✓',text:'הכל תקין — אין התרעות לחודש זה'});
+
+  // ── Helpers ──
+  function utilBar(pct){
+    const w=Math.min(pct,100);
+    const col=pct>100?'var(--danger)':pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--muted-2)';
+    return `<div class="ins-bar-wrap"><div class="ins-bar" style="width:${w}%;background:${col}"></div></div>`;
+  }
+  function utilBadge(pct){
+    const col=pct>100?'b-danger':pct>=80?'b-ok':pct>=50?'b-warn':'b-none';
+    return `<span class="badge ${col}">${pct}%</span>`;
+  }
+
+  // ── Client status table ──
+  const clientRows=state.clients.map(c=>{
+    const cont=getClientHours(c,mk),alloc=getClientAllocated(c.id,mk),diff=alloc-cont;
+    let status='<span class="badge b-none">— אין</span>';
+    if(cont>0&&alloc>=cont)status='<span class="badge b-ok">✓ מכוסה</span>';
+    else if(cont>0&&alloc>0)status='<span class="badge b-warn">⚠ חלקי</span>';
+    else if(cont>0)status='<span class="badge b-danger">✗ ריק</span>';
+    const diffHtml=diff===0?'—':`<span style="color:${diff>0?'var(--danger)':'var(--warning)'}">${diff>0?'+':''}${diff}</span>`;
+    return `<tr><td><strong>${c.name}</strong></td><td>${clientTypeBadge(c.type)}</td><td>${cont}</td><td>${alloc}</td><td>${diffHtml}</td><td>${status}</td></tr>`;
+  }).join('');
+
+  // ── Trend comparison ──
+  const prevIdx=(state.activeMonths||[]).indexOf(mk)-1;
+  const prevMk=prevIdx>=0?(state.activeMonths||[])[prevIdx]:null;
+  let trendSection='';
+  if(prevMk){
+    const prevAlloc=getTotalAllocated(prevMk);
+    const prevCap=activeEmps.reduce((s,e)=>s+getEmpHours(e,prevMk),0);
+    const prevUtil=prevCap>0?Math.round(prevAlloc/prevCap*100):0;
+    const diff=utilPct-prevUtil;
+    const diffStr=diff>0?`+${diff}%`:diff<0?`${diff}%`:'ללא שינוי';
+    const diffCol=diff>0?'var(--success)':diff<0?'var(--danger)':'var(--muted)';
+    trendSection=`<div class="ins-section">
+      <div class="ins-section-hd">
+        <div class="ins-section-icon" style="background:#eff6ff"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 10.5L5 6l3 2.5L12 2.5" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+        <div><div class="ins-section-title">השוואה לחודש קודם</div><div class="ins-section-sub">${mkLabel(prevMk)}</div></div>
+      </div>
+      <div class="ins-section-bd">
+        <div class="ins-stat-row"><span style="color:var(--muted)">ניצולת נוכחי</span><span class="ins-stat-val">${utilPct}%</span></div>
+        <div class="ins-stat-row"><span style="color:var(--muted)">ניצולת קודם</span><span class="ins-stat-val">${prevUtil}%</span></div>
+        <div class="ins-stat-row"><span style="color:var(--muted)">שינוי</span><span class="ins-stat-val" style="color:${diffCol}">${diffStr}</span></div>
+        <div class="ins-stat-row"><span style="color:var(--muted)">הקצאות קודם</span><span class="ins-stat-val">${prevAlloc}h</span></div>
+      </div>
+    </div>`;
+  }
+
+  return `
+  <div class="page-hd flex items-c just-b">
+    <div><div class="page-title">מבט על</div><div class="page-sub">${ml} | ${visEmps} עובדים פעילים · ${clientCov.length} לקוחות עם שעות</div></div>
+  </div>
+
+  <!-- Alerts bar -->
+  <div style="margin-bottom:20px">
+    ${alerts.map(a=>`<div class="ins-alert ${a.type}" style="margin-bottom:6px"><span class="ins-alert-icon">${a.icon}</span><span>${a.text}</span></div>`).join('')}
+  </div>
+
+  <!-- KPIs: 6 cards -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:24px">
+    <div class="kpi p"><div class="kpi-accent"></div><div class="kpi-lbl">שעות לקוחות</div><div class="kpi-val">${totalC.toLocaleString()}</div><div class="kpi-sub">סה״כ מוזמן</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M3 21V7l7-4 7 4v14" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="13" width="3" height="8" rx="0.5" fill="currentColor"/></svg></div></div>
+    <div class="kpi s"><div class="kpi-accent"></div><div class="kpi-lbl">קיבולת עובדים</div><div class="kpi-val">${totalCap.toLocaleString()}</div><div class="kpi-sub">סה״כ זמין</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+    <div class="kpi ${utilPct>100?'d':utilPct>80?'w':'s'}"><div class="kpi-accent"></div><div class="kpi-lbl">ניצולת</div><div class="kpi-val" style="color:${capColor}">${utilPct}%</div><div class="kpi-sub">${totalAlloc}h מוקצות</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><polyline points="3,17 8,11 13,14 21,6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="kpi ${gap<0?'d':'w'}"><div class="kpi-accent"></div><div class="kpi-lbl">פער קיבולת</div><div class="kpi-val">${gap>0?'+':''}${gap}</div><div class="kpi-sub">${gap>=0?'עודף':'חסר'}</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M13 3L21 12 13 21M3 12h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="kpi w"><div class="kpi-accent"></div><div class="kpi-lbl">ימי עבודה</div><div class="kpi-val">${wd.effective}</div><div class="kpi-sub">${wd.off} חגים · ${wd.half} ערבי חג</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v3M16 2v3M3 9h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+    <div class="kpi ${totalVacDays>0?'w':'s'}"><div class="kpi-accent"></div><div class="kpi-lbl">ימי חופשה</div><div class="kpi-val">${totalVacDays}</div><div class="kpi-sub">${vacData.length} עובדים</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M17 8C17 11.3137 14.3137 14 11 14C7.68629 14 5 11.3137 5 8C5 4.68629 7.68629 2 11 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M19 2L19 8L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 22C3 19 6 17 11 17C16 17 19 19 19 22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+  </div>
+
+  <!-- 3 charts -->
+  <div class="chart-grid" style="grid-template-columns:2fr 1fr 2fr;margin-bottom:24px">
+    <div class="chart-card"><div class="chart-title">שעות לקוח — מוזמן vs. מוקצה</div><canvas id="ch-alloc" height="220"></canvas></div>
+    <div class="chart-card" style="display:flex;flex-direction:column;align-items:center">
+      <div class="chart-title" style="align-self:flex-start">לפי סוג לקוח</div>
+      <canvas id="ch-type" width="200" height="200" style="max-width:200px;margin:auto"></canvas>
+    </div>
+    <div class="chart-card"><div class="chart-title">מגמה חודשית — שעות</div><canvas id="ch-trend" height="220"></canvas></div>
+  </div>
+
+  <!-- Insight sections grid -->
+  <div class="ins-grid" style="margin-bottom:24px">
+    <!-- Employee utilization -->
+    <div class="ins-section">
+      <div class="ins-section-hd">
+        <div class="ins-section-icon" style="background:#eff6ff"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="3.5" r="2.5" stroke="#2563eb" stroke-width="1.3"/><path d="M1 12c0-2 1.8-3.5 4-3.5s4 1.5 4 3.5" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round"/><path d="M10.5 5.5v4M8.5 7.5h4" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+        <div><div class="ins-section-title">ניצולת עובדים</div><div class="ins-section-sub">הקצאות מול קיבולת</div></div>
+      </div>
+      <div class="ins-section-bd">
+        ${empUtils.map(({e,cap,alloc,pct,vac})=>`
+          <div class="ins-row">
+            <div class="ins-row-name">${e.name}${vac>0?`<span style="font-size:10px;color:var(--muted);margin-right:4px">(${vac}d)</span>`:''}</div>
+            ${utilBar(pct)}
+            <div class="ins-row-val" style="min-width:60px;text-align:left">${utilBadge(pct)}</div>
+            <div style="font-size:11px;color:var(--muted);min-width:60px;text-align:left">${alloc}/${cap}h</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Client coverage -->
+    <div class="ins-section">
+      <div class="ins-section-hd">
+        <div class="ins-section-icon" style="background:#f0fdf4"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12V5.5l5-3.5 5 3.5V12" stroke="#16a34a" stroke-width="1.3" fill="none" stroke-linejoin="round"/><rect x="5" y="7.5" width="2.5" height="4.5" rx="0.5" fill="#16a34a"/></svg></div>
+        <div><div class="ins-section-title">כיסוי לקוחות</div><div class="ins-section-sub">הקצאות מול תכנון</div></div>
+      </div>
+      <div class="ins-section-bd">
+        ${clientCov.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין לקוחות עם שעות מתוכננות</div>`:''}
+        ${clientCov.map(({c,planned,alloc,pct})=>`
+          <div class="ins-row">
+            <div class="ins-row-name">${c.name}</div>
+            ${utilBar(pct??0)}
+            <div class="ins-row-val" style="min-width:60px;text-align:left">${utilBadge(pct??0)}</div>
+            <div style="font-size:11px;color:var(--muted);min-width:60px;text-align:left">${alloc}/${planned}h</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Holidays -->
+    <div class="ins-section">
+      <div class="ins-section-hd">
+        <div class="ins-section-icon" style="background:#faf5ff"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="3" width="10" height="9" rx="1.5" stroke="#7c3aed" stroke-width="1.3"/><path d="M5 2v2M9 2v2M2 6.5h10" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+        <div><div class="ins-section-title">חגים ומועדים</div><div class="ins-section-sub">${hoursLost}h נגרעות מהקיבולת</div></div>
+      </div>
+      <div class="ins-section-bd">
+        ${monthHols.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין חגים בחודש זה</div>`:''}
+        <div class="ins-holiday-list">
+          ${monthHols.map(([d,h])=>`
+            <div class="ins-holiday ${h.type}">
+              <span>${h.name}</span>
+              <span style="font-size:11px;font-weight:600">${d.slice(8)} ב${['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][mo-1]}</span>
+            </div>`).join('')}
+        </div>
+        ${monthHols.length>0?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:16px">
+          <span style="font-size:12px;color:var(--muted)"><span style="font-weight:600;color:var(--text)">${wd.off}</span> חגים מלאים</span>
+          <span style="font-size:12px;color:var(--muted)"><span style="font-weight:600;color:var(--text)">${wd.half}</span> ערבי חג</span>
+        </div>`:''}
+      </div>
+    </div>
+
+    <!-- Vacations -->
+    <div class="ins-section">
+      <div class="ins-section-hd">
+        <div class="ins-section-icon" style="background:#fff7ed"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4 1.5 2 4 2 6.5c0 3 2 5.5 5 6 3-.5 5-3 5-6 0-2.5-2-5-5-5z" stroke="#ea580c" stroke-width="1.3"/><path d="M7 4v3.5l2 1" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+        <div><div class="ins-section-title">חופשות עובדים</div><div class="ins-section-sub">סה״כ ${totalVacDays} ימים</div></div>
+      </div>
+      <div class="ins-section-bd">
+        ${vacData.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין חופשות מוזנות</div>`:''}
+        ${vacData.map(({e,days})=>`
+          <div class="ins-row">
+            <div class="ins-row-name">${e.name}</div>
+            <div style="flex:1;font-size:12px;color:var(--muted)">${days} ימים</div>
+            <div class="ins-row-val" style="color:var(--warning)">−${Math.round(days*7*(e.scope??100)/100)}h</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    ${projAlerts.length>0?`
+    <!-- Project bank -->
+    <div class="ins-section">
+      <div class="ins-section-hd">
+        <div class="ins-section-icon" style="background:#f0fdf4"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="4" width="11" height="8" rx="1.5" stroke="#16a34a" stroke-width="1.3"/><path d="M4.5 4V3a2.5 2.5 0 015 0v1" stroke="#16a34a" stroke-width="1.3" stroke-linecap="round"/><path d="M7 7.5v1.5" stroke="#16a34a" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+        <div><div class="ins-section-title">בנק שעות פרויקטים</div><div class="ins-section-sub">מעקב צריכה</div></div>
+      </div>
+      <div class="ins-section-bd">
+        ${projAlerts.map(({c,remaining,pct})=>`
+          <div class="ins-row">
+            <div class="ins-row-name">${c.name}</div>
+            <div class="ins-bar-wrap" style="flex:1"><div class="ins-bar" style="width:${Math.min(pct,100)}%;background:${pct>80?'var(--danger)':pct>50?'var(--warning)':'var(--success)'}"></div></div>
+            <div class="ins-row-val" style="min-width:60px;text-align:left;color:${remaining<20?'var(--danger)':'var(--muted)'}">נותר ${remaining}h</div>
+          </div>`).join('')}
+      </div>
+    </div>`:''}
+
+    ${trendSection}
+  </div>
+
+  <!-- Business insights -->
+  ${generateBizInsights(mk)}
+
+  <!-- Client status table -->
+  <div class="card">
+    <div class="card-hd"><div class="card-title">סטטוס לקוחות — ${ml}</div></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>לקוח</th><th>סוג</th><th>מוזמן</th><th>מוקצה</th><th>פער</th><th>סטטוס</th></tr></thead>
+      <tbody>${clientRows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ===================== BUSINESS INSIGHTS ENGINE =====================
+function generateBizInsights(mk){
+  const allMonths=[...(state.activeMonths||[mk])].sort();
+  const currentIdx=allMonths.indexOf(mk);
+  if(currentIdx<0)return'';
+  const histMonths=allMonths.slice(Math.max(0,currentIdx-5),currentIdx+1);
+  const prevMonths=histMonths.slice(0,-1);
+
+  const activeEmps=state.employees.filter(e=>!e.hidden);
+  const visClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+
+  const mStats=histMonths.map(m=>{
+    const cap=activeEmps.reduce((s,e)=>s+getEmpHours(e,m),0);
+    const alloc=getTotalAllocated(m);
+    const contracted=state.clients.reduce((s,c)=>s+(getClientHours(c,m)||0),0);
+    const util=cap>0?Math.round(alloc/cap*100):0;
+    return{m,cap,alloc,contracted,util};
+  });
+  const curr=mStats[mStats.length-1];
+
+  function card(sev,icon,title,body,meta=''){
+    const border=sev==='danger'?'#f85149':sev==='warn'?'#d29922':sev==='ok'?'#3fb950':'#58a6ff';
+    const iconCol=border;
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-right:3px solid ${border};border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="color:${iconCol};font-size:15px;line-height:1;font-weight:700">${icon}</span>
+        <span style="font-weight:600;font-size:13px;color:var(--text);flex:1">${title}</span>
+        ${meta?`<span style="font-size:10px;color:var(--muted);white-space:nowrap;background:var(--surface-2);padding:2px 6px;border-radius:10px">${meta}</span>`:''}
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.65">${body}</div>
+    </div>`;
+  }
+
+  if(histMonths.length<2)return`<div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2a5.5 5.5 0 100 11A5.5 5.5 0 007.5 2z" stroke="var(--primary)" stroke-width="1.4"/><path d="M7.5 5.5v3M7.5 10v.5" stroke="var(--primary)" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span style="font-weight:700;font-size:14px">תובנות עסקיות</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)">נדרשים לפחות 2 חודשים פעילים לייצור תובנות היסטוריות.</div>
+  </div>`;
+
+  const insights=[];
+  const utils=mStats.map(s=>s.util);
+  const avgUtil=Math.round(utils.reduce((s,x)=>s+x,0)/utils.length);
+  const sparkline=mStats.map(s=>`<span style="color:${s.util>=80?'var(--success)':s.util>=50?'var(--warning)':'var(--danger)'}">${mkLabel(s.m).split(' ')[0]} ${s.util}%</span>`).join('<span style="color:var(--border);padding:0 4px">›</span>');
+
+  // ── 1. Utilization trend ──
+  const trendDelta=utils.length>=3?utils[utils.length-1]-utils[utils.length-3]:utils[utils.length-1]-utils[0];
+  if(trendDelta>=10){
+    insights.push(card('ok','↑','ניצולת בעלייה עקבית',`שיפור של <strong>+${trendDelta} נק'</strong> ב-${histMonths.length} חודשים — הצוות נהיה עמוס יותר ביחס לקיבולתו.<br>${sparkline}`,`ממוצע ${avgUtil}%`));
+  }else if(trendDelta<=-10){
+    insights.push(card('danger','↓','ניצולת בירידה',`ירידה של <strong>${trendDelta} נק'</strong> — ייתכן אובדן לקוחות, הגדלת צוות ללא ביקוש מקביל, או חודשי חגים.<br>${sparkline}`,`ממוצע ${avgUtil}%`));
+  }else{
+    insights.push(card('info','→','ניצולת יציבה',`נע בין <strong>${Math.min(...utils)}%–${Math.max(...utils)}%</strong> לאורך ${histMonths.length} חודשים — אין שינוי מגמה משמעותי.<br>${sparkline}`,`ממוצע ${avgUtil}%`));
+  }
+
+  // ── 2. Capacity pressure ──
+  const highPressureN=mStats.filter(s=>s.util>=90).length;
+  const lowUtilN=mStats.filter(s=>s.util<60).length;
+  if(highPressureN>=2){
+    insights.push(card('danger','🔥','לחץ מתמשך על קיבולת הצוות',`ניצולת מעל 90% ב-<strong>${highPressureN} מתוך ${histMonths.length} חודשים</strong>. פעולה בקיבולת קיצון לאורך זמן גוררת שחיקה ופגיעה באיכות. מומלץ לשקול גיוס.`,`${highPressureN}/${histMonths.length} חודשים`));
+  }else if(lowUtilN>=2){
+    insights.push(card('warn','○','קיבולת עודפת לאורך זמן',`ניצולת מתחת ל-60% ב-<strong>${lowUtilN} מתוך ${histMonths.length} חודשים</strong>. יש עודף כוח אדם ביחס לביקוש — בדוק פוטנציאל הרחבת מעגל לקוחות.`,`${lowUtilN}/${histMonths.length} חודשים`));
+  }
+
+  // ── 3. Employee burnout risk ──
+  const burnoutEmps=activeEmps.filter(e=>{
+    return histMonths.filter(m=>{const cap=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);return cap>0&&alloc/cap>=0.9;}).length>=2;
+  });
+  if(burnoutEmps.length){
+    insights.push(card('danger','⚡','סיכון שחיקת עובדים',burnoutEmps.map(e=>{
+      const n=histMonths.filter(m=>{const cap=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);return cap>0&&alloc/cap>=0.9;}).length;
+      const avgPct=Math.round(histMonths.reduce((s,m)=>{const cap=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);return s+(cap>0?alloc/cap*100:0);},0)/histMonths.length);
+      return `<strong>${e.name}</strong> — מעל 90% ב-${n}/${histMonths.length} חודשים (ממוצע ${avgPct}%)`;
+    }).join('<br>'),`${burnoutEmps.length} עובד${burnoutEmps.length>1?'ים':''}`));
+  }
+
+  // ── 4. Chronic under-utilization ──
+  const underEmps=activeEmps.filter(e=>{
+    return histMonths.filter(m=>{const cap=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);return cap>0&&alloc/cap<0.5;}).length>=2;
+  });
+  if(underEmps.length){
+    insights.push(card('warn','↓','ניצולת נמוכה עקבית',underEmps.map(e=>{
+      const avgPct=Math.round(histMonths.reduce((s,m)=>{const cap=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);return s+(cap>0?alloc/cap*100:0);},0)/histMonths.length);
+      return `<strong>${e.name}</strong> — ממוצע ${avgPct}% ב-${histMonths.length} חודשים`;
+    }).join('<br>'),`${underEmps.length} עובד${underEmps.length>1?'ים':''}`));
+  }
+
+  // ── 5. Client churn risk ──
+  const churnClients=visClients.filter(c=>{
+    const relevantMonths=histMonths.filter(m=>getClientHours(c,m)>0);
+    if(relevantMonths.length<2)return false;
+    const badN=relevantMonths.filter(m=>{const p=getClientHours(c,m);return p&&getClientAllocated(c.id,m)/p<0.5;}).length;
+    return badN>=2&&getClientHours(c,mk)>0;
+  });
+  if(churnClients.length){
+    insights.push(card('danger','!','לקוחות בסיכון אובדן',churnClients.map(c=>{
+      const rel=histMonths.filter(m=>getClientHours(c,m)>0);
+      const avgPct=Math.round(rel.reduce((s,m)=>{const p=getClientHours(c,m);return s+(p?getClientAllocated(c.id,m)/p*100:0);},0)/rel.length);
+      return `<strong>${c.name}</strong> — ממוצע אספקה ${avgPct}% בלבד (${rel.length} חודשים)`;
+    }).join('<br>'),`${churnClients.length} לקוח${churnClients.length>1?'ות':''}`));
+  }
+
+  // ── 6. Scope creep ──
+  const scopeClients=visClients.filter(c=>{
+    const rel=histMonths.filter(m=>getClientHours(c,m)>0);
+    if(rel.length<2)return false;
+    return rel.filter(m=>{const p=getClientHours(c,m);return p&&getClientAllocated(c.id,m)/p>1.3;}).length>=2;
+  });
+  if(scopeClients.length){
+    insights.push(card('warn','↑','חריגת היקף עקבית',scopeClients.map(c=>{
+      const rel=histMonths.filter(m=>getClientHours(c,m)>0);
+      const avgPct=Math.round(rel.reduce((s,m)=>{const p=getClientHours(c,m);return s+(p?getClientAllocated(c.id,m)/p*100:0);},0)/rel.length);
+      return `<strong>${c.name}</strong> — ממוצע ${avgPct}% (+${avgPct-100}% מעל תקציב) ב-${rel.length} חודשים`;
+    }).join('<br>'),`${scopeClients.length} לקוח${scopeClients.length>1?'ות':''}`));
+  }
+
+  // ── 7. Client concentration risk ──
+  if(curr.contracted>0){
+    const sorted=visClients.map(c=>({c,h:getClientHours(c,mk)||0})).filter(x=>x.h>0).sort((a,b)=>b.h-a.h);
+    if(sorted.length){
+      const top1=sorted[0];
+      const top3H=sorted.slice(0,3).reduce((s,x)=>s+x.h,0);
+      const top1Pct=Math.round(top1.h/curr.contracted*100);
+      const top3Pct=Math.round(top3H/curr.contracted*100);
+      if(top1Pct>=25||top3Pct>=60){
+        insights.push(card('warn','⚠','ריכוזיות גבוהה בלקוחות',`<strong>${top1.c.name}</strong> מהווה ${top1Pct}% מסה״כ השעות המוזמנות.<br>3 הלקוחות הגדולים יחד = ${top3Pct}% מהביקוש הכולל — תלות גבוהה, סיכון מוגבר באובדן לקוח.`,`${sorted.length} לקוחות פעילים`));
+      }
+    }
+  }
+
+  // ── 8. Demand trend ──
+  if(mStats.length>=2){
+    const first=mStats[0],last=curr;
+    if(first.contracted>0){
+      const growth=Math.round((last.contracted-first.contracted)/first.contracted*100);
+      if(Math.abs(growth)>=10){
+        const sev=growth>0?'ok':'warn';
+        insights.push(card(sev,growth>0?'↑':'↓',`ביקוש לקוחות ב${growth>0?'עלייה':'ירידה'}`,`השעות המוזמנות ${growth>0?'עלו':'ירדו'} ב-<strong>${Math.abs(growth)}%</strong> מ-${mkLabel(first.m)} עד ${mkLabel(last.m)} (${first.contracted}h → ${last.contracted}h).`,`${mStats.length} חודשים`));
+      }
+    }
+  }
+
+  // ── 9. Demand vs capacity structural gap ──
+  const overCapN=mStats.filter(s=>s.contracted>s.cap*1.1).length;
+  if(overCapN>=2){
+    insights.push(card('danger','↑','ביקוש מבני עולה על קיבולת',`ב-<strong>${overCapN} מתוך ${histMonths.length} חודשים</strong> הביקוש המוזמן עולה על קיבולת הצוות ב-10%+. חלק מהלקוחות כנראה לא מקבלים שירות מלא. שקול גיוס.`,mStats.map(s=>`${Math.round(s.contracted/Math.max(s.cap,1)*100)}%`).join(', ')));
+  }
+
+  // ── 10. Revenue mix ──
+  const retH=state.clients.filter(c=>c.active!==false&&c.type==='retainer').reduce((s,c)=>s+(getClientHours(c,mk)||0),0);
+  const projH=state.clients.filter(c=>c.active!==false&&c.type==='project').reduce((s,c)=>s+(getClientHours(c,mk)||0),0);
+  const mixTotal=retH+projH;
+  if(mixTotal>0){
+    const retPct=Math.round(retH/mixTotal*100);
+    if(retPct>=80){
+      insights.push(card('ok','✓','תמהיל עסקי בריא',`<strong>${retPct}%</strong> ריטיינר — הכנסה צפויה ויציבה. ${100-retPct}% פרויקטלי — גמישות עסקית.`,'mix'));
+    }else if(retPct<50){
+      insights.push(card('warn','!','תמהיל — תלות גבוהה בפרויקטים',`רק <strong>${retPct}%</strong> מהשעות הן ריטיינר. ${100-retPct}% פרויקטלי — חשיפה לתנודות בהכנסות.`,'mix'));
+    }
+  }
+
+  if(!insights.length)return'';
+
+  return`<div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2a5.5 5.5 0 100 11A5.5 5.5 0 007.5 2z" stroke="var(--primary)" stroke-width="1.4"/><path d="M7.5 5.5v3M7.5 10v.5" stroke="var(--primary)" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <span style="font-weight:700;font-size:14px">תובנות עסקיות</span>
+      <span style="font-size:11px;color:var(--muted)">ניתוח על בסיס ${histMonths.length} חודשים — ${histMonths.map(m=>mkLabel(m).split(' ')[0]).join(', ')}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px">
+      ${insights.join('')}
+    </div>
+  </div>`
+}
+
+function initCharts(){
+  const m=state.currentMonth;
+  Chart.defaults.font.family='-apple-system,"Segoe UI",Arial,sans-serif';
+  const topC=state.clients.filter(c=>c.active!==false&&getClientHours(c,m)>0).sort((a,b)=>getClientHours(b,m)-getClientHours(a,m)).slice(0,12);
+  const c1=document.getElementById('ch-alloc');
+  if(c1)_chartInstances.alloc=new Chart(c1,{type:'bar',data:{
+    labels:topC.map(c=>c.name.length>14?c.name.slice(0,14)+'…':c.name),
+    datasets:[
+      {label:'מוזמן',data:topC.map(c=>getClientHours(c,m)),backgroundColor:'#6366f133',borderColor:'#6366f1',borderWidth:1.5,borderRadius:4},
+      {label:'מוקצה',data:topC.map(c=>getClientAllocated(c.id,m)),backgroundColor:'#10b98133',borderColor:'#10b981',borderWidth:1.5,borderRadius:4},
+    ]},options:{responsive:true,plugins:{legend:{position:'top',rtl:true}},scales:{y:{beginAtZero:true}}}});
+
+  const retH=state.clients.filter(c=>c.active!==false&&c.type==='retainer').reduce((s,c)=>s+getClientHours(c,m),0);
+  const projH=state.clients.filter(c=>c.active!==false&&c.type==='project').reduce((s,c)=>s+getClientHours(c,m),0);
+  const intH=state.clients.filter(c=>c.active!==false&&c.type==='internal').reduce((s,c)=>s+getClientHours(c,m),0);
+  const c2=document.getElementById('ch-type');
+  if(c2)_chartInstances.type=new Chart(c2,{type:'doughnut',data:{labels:['ריטיינר','פרויקט','פנימי'],datasets:[{data:[retH,projH,intH],backgroundColor:['#6366f1','#10b981','#7c3aed'],borderWidth:0}]},options:{responsive:false,plugins:{legend:{position:'bottom',rtl:true}},cutout:'65%'}});
+
+  const c4=document.getElementById('ch-trend');
+  if(c4)_chartInstances.trend=new Chart(c4,{type:'line',data:{
+    labels:MONTHS.map(x=>x.short),
+    datasets:[
+      {label:'שעות לקוחות',data:MONTHS.map(mo=>state.clients.filter(c=>c.active!==false).reduce((s,c)=>s+getClientHours(c,mo.key),0)),borderColor:'#6366f1',backgroundColor:'#6366f112',fill:true,tension:.4,borderWidth:2,pointBackgroundColor:'#6366f1'},
+      {label:'קיבולת עובדים',data:MONTHS.map(mo=>state.employees.reduce((s,e)=>s+getEmpHours(e,mo.key),0)),borderColor:'#10b981',backgroundColor:'transparent',tension:.4,borderWidth:2,borderDash:[5,3],pointBackgroundColor:'#10b981'},
+    ]},options:{responsive:true,plugins:{legend:{position:'top',rtl:true}},scales:{y:{beginAtZero:true}}}});
+}
+
+// ===================== CLIENTS PAGE =====================
+function renderClients(){
+  const m=state.currentMonth,ml=MONTHS.find(x=>x.key===m)?.label||m;
+  const totalH=state.clients.filter(c=>c.active!==false).reduce((s,c)=>s+getClientHours(c,m),0);
+  const retC=state.clients.filter(c=>c.active!==false&&c.type==='retainer').length;
+  const projC=state.clients.filter(c=>c.active!==false&&c.type==='project').length;
+  const intC=state.clients.filter(c=>c.active!==false&&c.type==='internal').length;
+
+  const activeCount=state.clients.filter(c=>c.active!==false).length;
+  const rows=state.clients
+    .slice().sort((a,b)=>a.name.localeCompare(b.name,'he'))
+    .filter(c=>_clientShowInactive||c.active!==false)
+    .map(c=>{
+    const cont=getClientHours(c,m),alloc=getClientAllocated(c.id,m);
+    const util=cont>0?Math.round(alloc/cont*100):0;
+    const bc=util>100?'pb-d':util>80?'pb-w':'pb-i';
+    const isInactive=c.active===false;
+    // Bank column
+    let bankCol='<span class="text-m text-sm">—</span>';
+    if(c.type==='project'&&c.hoursBank){
+      const billed=getTotalBilled(c);
+      const remain=Math.max(0,c.hoursBank-billed);
+      const pct=Math.round(billed/c.hoursBank*100);
+      const bc2=remain<c.hoursBank*0.2?'pb-d':remain<c.hoursBank*0.5?'pb-w':'pb-s';
+      const rc=remain<c.hoursBank*0.2?'var(--danger)':remain<c.hoursBank*0.5?'var(--warning)':'var(--success)';
+      bankCol=`<div style="min-width:130px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+          <strong style="color:${rc}">${remain}h נותר</strong>
+          <span style="color:var(--muted)">${billed}/${c.hoursBank}h</span>
+        </div>
+        <div class="pb-wrap"><div class="pb ${bc2}" style="width:${Math.min(pct,100)}%"></div></div>
+      </div>`;
+    }
+    return `<tr${isInactive?' class="emp-hidden"':''}>
+      <td>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" ${isInactive?'':'checked'} onchange="toggleClientActive('${c.id}')"
+            style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary)">
+          <strong style="${isInactive?'color:var(--muted)':''}">${c.name}</strong>
+          ${isInactive?'<span class="chip">לא פעיל</span>':''}
+        </label>
+      </td>
+      <td>${clientTypeBadge(c.type)}</td>
+      <td><input type="number" class="fi" style="width:90px;padding:4px 8px" value="${cont}" min="0" onchange="updateClientHours('${c.id}','${m}',this.value)"></td>
+      <td>${bankCol}</td>
+      <td>${alloc}</td>
+      <td style="min-width:110px"><div class="flex items-c gap2"><div class="pb-wrap" style="flex:1"><div class="pb ${bc}" style="width:${Math.min(util,100)}%"></div></div><span class="text-sm text-m" style="min-width:35px">${util}%</span></div></td>
+      <td style="min-width:90px">${(()=>{const wd=c.weeklyDay!=null?(Array.isArray(c.weeklyDay)?c.weeklyDay:[c.weeklyDay]):[];if(!wd.length)return'<span class="text-m text-sm">—</span>';const names={0:'א׳',1:'ב׳',2:'ג׳',3:'ד׳',4:'ה׳'};return'<div style="display:flex;gap:4px;flex-wrap:wrap">'+wd.map(d=>'<span style="background:var(--primary-light,#ede9fe);color:var(--primary);border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600">'+names[d]+'</span>').join('')+'</div>';})()}</td>
+      <td><div class="actions">
+        <button class="btn btn-s btn-sm" onclick="openClientModal('${c.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
+        <button class="btn btn-d btn-sm" onclick="deleteClient('${c.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="page-hd flex items-c just-b">
+    <div><div class="page-title">לקוחות</div><div class="page-sub">${activeCount} פעילים מתוך ${state.clients.length} | ${retC} ריטיינר | ${projC} פרויקט${intC?` | ${intC} פנימי`:''} | ${totalH} שעות ב${ml}</div></div>
+    <div class="flex gap2">
+      <button class="btn btn-s btn-sm" onclick="_clientShowInactive=!_clientShowInactive;renderPage()">${_clientShowInactive?'הסתר לא פעילים':'הצג לא פעילים'}</button>
+      <button class="btn btn-p" onclick="openClientModal()">+ הוסף לקוח</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div class="card-title">רשימת לקוחות</div><span class="text-sm text-m">☑ = פעיל במטריצה | עריכת שעות ישירה לחודש: ${ml}</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>☑ שם לקוח</th><th>סוג</th><th>שעות ${ml}</th><th>🏦 בנק שעות</th><th>מוקצות</th><th>ניצולת</th><th>ימי ויקלי</th><th>פעולות</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+function updateClientHours(cid,mk,v){
+  const c=state.clients.find(x=>x.id===cid);
+  if(!c)return;
+  if(!c.monthlyHours)c.monthlyHours={};
+  c.monthlyHours[mk]=parseFloat(v)||0;
+  saveState();
+}
+
+function deleteClient(id){
+  if(!confirm('למחוק לקוח זה? כל ההקצאות שלו ימחקו.'))return;
+  state.clients=state.clients.filter(c=>c.id!==id);
+  Object.keys(state.matrix).forEach(mk=>Object.keys(state.matrix[mk]).forEach(eid=>{delete state.matrix[mk][eid][id];}));
+  saveState();renderPage();
+}
+
+function toggleClientActive(cid){
+  const c=state.clients.find(x=>x.id===cid);
+  if(c){c.active=c.active===false?true:false;saveState();renderPage();}
+}
+
+function openClientModal(cid=null){
+  const c=cid?state.clients.find(x=>x.id===cid):null;
+  const firstVal=c?Object.values(c.monthlyHours||{})[0]||0:0;
+  const isProj=c?.type==='project';
+  const totalBilled=c?getTotalBilled(c):0;
+  const bankRemain=c?.hoursBank?c.hoursBank-totalBilled:null;
+  const hf=MONTHS.map(mo=>`
+    <div class="mcell">
+      <div class="mcell-lbl">${mo.short}${isProj?'<br><span style="font-size:8px;color:#6366f1">מתוכנן</span>':''}</div>
+      <input type="number" class="mcell-inp" min="0" value="${c?getClientHours(c,mo.key):0}" data-month="${mo.key}">
+      <div class="billed-row" style="${isProj?'':'display:none'}">
+        <input type="number" class="mcell-billed" min="0" value="${c?.billedHours?.[mo.key]||''}" data-billed="${mo.key}" placeholder="חויב">
+      </div>
+    </div>`).join('');
+  const _existWd=c?.weeklyDay!=null?(Array.isArray(c.weeklyDay)?c.weeklyDay:[c.weeklyDay]):[];
+  const _wdChecks='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">'+[[0,'ראשון'],[1,'שני'],[2,'שלישי'],[3,'רביעי'],[4,'חמישי']].map(function(p){var v=p[0],lbl=p[1];return'<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" id="c-wd-'+v+'" value="'+v+'" '+(_existWd.includes(v)?'checked':'')+'><span>'+lbl+'</span></label>';}).join('')+'</div>';
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:580px">
+      <div class="modal-hd">
+        <div class="modal-t">${c?'עריכת לקוח':'הוספת לקוח'}</div>
+        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div class="fg"><label class="fl">שם לקוח</label>
+          <input type="text" class="fi" id="c-name" value="${c?.name||''}" placeholder="שם הלקוח"></div>
+        <div class="fg"><label class="fl">סוג לקוח</label>
+          <select class="fs" id="c-type" onchange="toggleClientTypeFields(this.value)">
+            <option value="retainer" ${c?.type==='retainer'||!c?'selected':''}>ריטיינר</option>
+            <option value="project" ${c?.type==='project'?'selected':''}>פרויקט</option>
+            <option value="internal" ${c?.type==='internal'?'selected':''}>פנימי</option>
+          </select></div>
+        <div id="bank-section" ${isProj?'':'style="display:none"'}>
+          <div class="fg">
+            <label class="fl">🏦 בנק שעות (תקציב פרויקט)</label>
+            <input type="number" class="fi" id="c-bank" value="${c?.hoursBank||''}" min="0" placeholder="סה״כ שעות בפרויקט">
+            ${bankRemain!==null?`<div class="fhint" style="color:${bankRemain<20?'var(--danger)':'var(--success)'}">נותר: ${bankRemain}h — חויב ${totalBilled}h מתוך ${c.hoursBank}h</div>`:'<div class="fhint">הגדר תקציב כולל; שעות עתידיות יקוזזו אוטומטית לפי חיוב בפועל</div>'}
+          </div>
+        </div>
+        <div id="hours-section" ${c?.type==='internal'?'style="display:none"':''}>
+          <div class="fg">
+            <label class="fl">שעות לפי חודש
+              <span id="billed-lbl" class="text-sm text-m" ${isProj?'':'style="display:none"'}> | שורה צהובה = חויב בפועל</span>
+            </label>
+            <div class="apply-bar">
+              <span style="font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M7.5 1L2 7.5h5L4.5 12 11 5.5H6L7.5 1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> החל לכל החודשים:</span>
+              <input type="number" id="apply-all-val" min="0" value="${firstVal}" placeholder="שעות">
+              <button class="btn btn-p btn-sm" onclick="applyToAllMonths()">החל</button>
+            </div>
+            <div class="mgrid">${hf}</div>
+          </div>
+        </div>
+        <div class="fg" id="weekly-day-section" ${c?.type==='internal'?'style="display:none"':''}>
+          <label class="fl">ימי ויקלי <span class="text-m text-sm">(ימים קבועים לפגישה שבועית)</span></label>
+          ${_wdChecks}
+        </div>
+        <div class="fg">
+          <label class="fl">עובדים משויכים <span class="text-m text-sm">(עדיפות בפיזור אוטומטי)</span></label>
+          <div class="pref-grid">
+            ${state.employees.map(emp=>`
+              <label class="pref-item">
+                <input type="checkbox" data-cemp="${emp.id}" ${cid&&(emp.preferredClients||[]).includes(cid)?'checked':''}>
+                <span style="flex:1">${emp.name}</span>
+                ${emp.role?`<span style="font-size:10px;color:var(--muted)">${emp.role}</span>`:''}
+              </label>`).join('')}
+          </div>
+          <div class="fhint">עובדים שיסומנו יקבלו עדיפות בהקצאת לקוח זה בפיזור אוטומטי.</div>
+        </div>
+      </div>
+      <div class="modal-ft">
+        <button class="btn btn-s" onclick="closeModal()">ביטול</button>
+        <button class="btn btn-p" onclick="saveClient('${cid||''}')">שמור</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleClientTypeFields(type){
+  const isProj=type==='project';
+  const isInt=type==='internal';
+  const bs=document.getElementById('bank-section');
+  if(bs)bs.style.display=isProj?'':'none';
+  const hs=document.getElementById('hours-section');
+  if(hs)hs.style.display=isInt?'none':'';
+  const bl=document.getElementById('billed-lbl');
+  if(bl)bl.style.display=isProj?'':'none';
+  document.querySelectorAll('.billed-row').forEach(el=>el.style.display=isProj?'':'none');
+  const wds=document.getElementById('weekly-day-section');
+  if(wds)wds.style.display=isInt?'none':'';
+}
+
+function applyToAllMonths(){
+  const val=document.getElementById('apply-all-val').value;
+  document.querySelectorAll('[data-month]').forEach(i=>i.value=val||0);
+}
+
+function saveClient(cid){
+  const name=document.getElementById('c-name').value.trim();
+  const type=document.getElementById('c-type').value;
+  if(!name){alert('יש להזין שם לקוח');return;}
+  const mh={};
+  document.querySelectorAll('[data-month]').forEach(i=>{mh[i.dataset.month]=parseFloat(i.value)||0;});
+  const billedH={};
+  document.querySelectorAll('[data-billed]').forEach(i=>{const v=parseFloat(i.value);if(v>0)billedH[i.dataset.billed]=v;});
+  const bankVal=parseFloat(document.getElementById('c-bank')?.value)||0;
+  const assignedEmpIds=new Set([...document.querySelectorAll('[data-cemp]:checked')].map(i=>i.dataset.cemp));
+  let clientId=cid;
+  if(cid){
+    const c=state.clients.find(x=>x.id===cid);
+    if(c){
+      c.name=name;c.type=type;c.monthlyHours=mh;
+      if(type==='project'){if(bankVal)c.hoursBank=bankVal;else delete c.hoursBank;c.billedHours=billedH;}
+      else{delete c.hoursBank;delete c.billedHours;}
+      const wdArr=[0,1,2,3,4].filter(v=>document.getElementById(`c-wd-${v}`)?.checked);
+      if(wdArr.length)c.weeklyDay=wdArr;else delete c.weeklyDay;
+    }
+  } else {
+    const nc={id:'c'+Date.now(),name,type,monthlyHours:mh};
+    if(type==='project'){if(bankVal)nc.hoursBank=bankVal;nc.billedHours=billedH;}
+    const wdArr2=[0,1,2,3,4].filter(v=>document.getElementById(`c-wd-${v}`)?.checked);
+    if(wdArr2.length)nc.weeklyDay=wdArr2;
+    state.clients.push(nc);
+    state.clients.sort((a,b)=>a.name.localeCompare(b.name,'he'));
+    clientId=nc.id;
+  }
+  // Sync preferredClients on employees
+  state.employees.forEach(e=>{
+    const prefs=e.preferredClients||[];
+    if(assignedEmpIds.has(e.id)&&!prefs.includes(clientId)){prefs.push(clientId);e.preferredClients=prefs;}
+    else if(!assignedEmpIds.has(e.id)&&prefs.includes(clientId)){e.preferredClients=prefs.filter(x=>x!==clientId);}
+  });
+  saveState();
+  if(_empEditReturnId!==null){
+    const returnId=_empEditReturnId;
+    _empEditReturnId=null;
+    renderPage();
+    openEmpModal(returnId||undefined);
+  } else {
+    closeModal();renderPage();
+  }
+}
+
+// ===================== EMPLOYEES PAGE =====================
+function renderEmployees(){
+  const m=state.currentMonth,ml=MONTHS.find(x=>x.key===m)?.label||m;
+  const wd=getWorkingDays(m),ah=wd*7;
+  const visCount=state.employees.filter(e=>e.visible!==false).length;
+
+  const sorted=state.employees.slice().sort((a,b)=>a.name.localeCompare(b.name,'he'));
+
+  let content='';
+  if(_empView==='cards'){
+    const cards=sorted.map(e=>{
+      const avail=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);
+      const util=avail>0?Math.round(alloc/avail*100):0;
+      const bc=util>100?'pb-d':util>85?'pb-w':'pb-s';
+      const isHidden=e.visible===false;
+      const empMatrix=(state.matrix[m]||{})[e.id]||{};
+      const clientEntries=Object.entries(empMatrix).filter(([,h])=>(parseFloat(h)||0)>0);
+      const clientRows=clientEntries.map(([cid,h])=>{
+        const cl=state.clients.find(c=>c.id===cid);if(!cl)return'';
+        const isPref=(e.preferredClients||[]).includes(cid);
+        return `<div class="emp-card-client-row">
+          <span>${isPref?'<span style="color:var(--primary);font-size:10px">★</span> ':''}<span>${cl.name}</span></span>
+          <span style="font-weight:700;color:var(--primary);font-size:12px">${h}h</span>
+        </div>`;
+      }).join('');
+      const noAlloc=clientEntries.length===0;
+      const utilColor=util>100?'var(--danger)':util>85?'var(--warning)':'var(--success)';
+      return `<div class="emp-card${isHidden?' emp-card-hidden':''}">
+        <div class="emp-card-hd">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;flex:1;min-width:0">
+            <input type="checkbox" ${isHidden?'':'checked'} onchange="toggleEmpVisibility('${e.id}')"
+              style="width:14px;height:14px;flex-shrink:0;cursor:pointer;accent-color:var(--primary)">
+            <strong style="font-size:14px;${isHidden?'color:var(--muted)':''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</strong>
+            ${isHidden?'<span class="chip" style="font-size:10px;flex-shrink:0">מוסתר</span>':''}
+          </label>
+          ${e.role?`<span class="chip" style="font-size:10px;flex-shrink:0">${e.role}</span>`:''}
+        </div>
+        <div class="emp-card-stat">
+          <span style="color:var(--muted)">שעות חודש</span>
+          <span style="font-weight:600">${avail}h</span>
+        </div>
+        <div class="emp-card-stat" style="margin-bottom:6px">
+          <span style="color:var(--muted)">מוקצה</span>
+          <span style="font-weight:700;color:${utilColor}">${alloc}h (${util}%)</span>
+        </div>
+        <div class="pb-wrap" style="margin-bottom:10px"><div class="pb ${bc}" style="width:${Math.min(util,100)}%"></div></div>
+        ${(e.preferredClients||[]).length>0?`<div style="font-size:10px;color:var(--primary);margin-bottom:6px">★ ${(e.preferredClients||[]).length} לקוחות קבועים</div>`:''}
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">הקצאות — ${ml}</div>
+        <div class="emp-card-clients">
+          ${noAlloc?`<div style="font-size:11px;color:var(--muted);text-align:center;padding:10px 0">אין הקצאות לחודש זה</div>`:clientRows}
+        </div>
+        <div class="emp-card-ft">
+          <button class="btn btn-s btn-sm" onclick="openEmpModal('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
+          <button class="btn btn-s btn-sm" title="שלח הקצאה" onclick="sendAllocation('${e.id}')">📤 שלח</button>
+          <button class="btn btn-s btn-sm" title="איפוס לאוטומטי" onclick="resetEmpHours('${e.id}','${m}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-d btn-sm" onclick="deleteEmployee('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </div>`;
+    }).join('');
+    content=`<div class="emp-cards-grid">${cards}</div>`;
+  } else {
+    const rows=sorted.map(e=>{
+      const avail=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);
+      const util=avail>0?Math.round(alloc/avail*100):0;
+      const bc=util>100?'pb-d':util>85?'pb-w':'pb-s';
+      const ac=getEmpActiveClients(e.id,m);
+      const isAuto=e.monthlyHours?.[m]===undefined;
+      const isHidden=e.visible===false;
+      const scope=e.scope!=null?e.scope:100;
+      return `<tr class="${isHidden?'emp-hidden':''}">
+        <td>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" ${isHidden?'':'checked'} onchange="toggleEmpVisibility('${e.id}')"
+              style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary)">
+            <strong style="${isHidden?'color:var(--muted)':''}">${e.name}</strong>
+            ${isHidden?'<span class="chip">מוסתר</span>':''}
+            ${scope<100?`<span class="chip" style="background:var(--primary-light);color:var(--primary);border-color:rgba(218,119,86,.25)">${scope}%</span>`:''}
+          </label>
+        </td>
+        <td>
+          <span class="text-m text-sm">${e.role||'—'}</span>
+          ${(e.preferredClients||[]).length>0?`<div style="font-size:10px;color:var(--primary)">★ ${(e.preferredClients||[]).length} לקוחות קבועים</div>`:''}
+        </td>
+        <td>
+          <div class="flex items-c gap2">
+            <input type="number" class="fi" style="width:90px;padding:4px 8px" value="${avail}" min="0" onchange="updateEmpHours('${e.id}','${m}',this.value)">
+            ${isAuto?'<span class="chip">אוטו</span>':''}
+          </div>
+        </td>
+        <td>
+          <input type="number" class="fi" style="width:70px;padding:4px 8px;text-align:center" value="${(state.vacations?.[m]?.[e.id])||0}" min="0" max="30"
+            onchange="updateEmpVacDays('${e.id}','${m}',this.value)">
+        </td>
+        <td>${alloc}</td>
+        <td style="min-width:110px"><div class="flex items-c gap2"><div class="pb-wrap" style="flex:1"><div class="pb ${bc}" style="width:${Math.min(util,100)}%"></div></div><span class="text-sm text-m" style="min-width:35px">${util}%</span></div></td>
+        <td><span class="${ac>=6?'badge b-warn':''}">${ac} / 6</span></td>
+        <td><div class="actions">
+          <button class="btn btn-s btn-sm" onclick="openEmpModal('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
+          <button class="btn btn-s btn-sm" title="שלח הקצאה" onclick="sendAllocation('${e.id}')">📤 שלח</button>
+          <button class="btn btn-s btn-sm" title="איפוס לאוטומטי" onclick="resetEmpHours('${e.id}','${m}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-d btn-sm" onclick="deleteEmployee('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div></td>
+      </tr>`;
+    }).join('');
+    content=`<div class="card">
+      <div class="card-hd">
+        <div class="card-title">רשימת עובדים</div>
+        <span class="flex items-c gap2 text-sm text-m">
+          <span class="chip">☑ = מוצג במטריצה</span>
+          <span class="chip">7h × ${wd} ימים = ${ah}h ברירת מחדל</span>
+          <span class="chip"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> = איפוס לאוטומטי</span>
+        </span>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>☑ שם</th><th>תפקיד</th><th>שעות ${ml}</th><th>ימי חופש</th><th>מוקצות</th><th>ניצולת</th><th>לקוחות</th><th>פעולות</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  return `
+  <div class="page-hd flex items-c just-b">
+    <div><div class="page-title">עובדים</div>
+      <div class="page-sub">${state.employees.length} עובדים | ${visCount} מוצגים במטריצה | ימי עבודה ב${ml}: ${wd} | ברירת מחדל: ${ah}h</div>
+    </div>
+    <div class="flex gap2">
+      <button class="btn btn-s btn-sm" onclick="toggleAllEmployees(true)">הצג הכל</button>
+      <button class="btn btn-s btn-sm" onclick="toggleAllEmployees(false)">הסתר הכל</button>
+      <button class="btn btn-s btn-sm" onclick="_empView=_empView==='cards'?'table':'cards';renderPage()">${_empView==='cards'?'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="9.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> טבלה':'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> כרטיסיות'}</button>
+      <button class="btn btn-s btn-sm" onclick="sendAllAllocations()">📤 שלח לכל</button>
+      <button class="btn btn-p" onclick="openEmpModal()">+ הוסף עובד</button>
+    </div>
+  </div>
+  ${content}`;
+}
+
+function toggleEmpVisibility(eid){
+  const e=state.employees.find(x=>x.id===eid);
+  if(e){e.visible=e.visible===false?true:false;saveState();renderPage();}
+}
+function toggleAllEmployees(show){
+  state.employees.forEach(e=>e.visible=show);
+  saveState();renderPage();
+}
+function updateEmpHours(eid,mk,v){
+  const e=state.employees.find(x=>x.id===eid);
+  if(!e)return;
+  if(!e.monthlyHours)e.monthlyHours={};
+  e.monthlyHours[mk]=parseFloat(v)||0;
+  saveState();
+}
+function updateEmpVacDays(eid,mk,v){
+  if(!state.vacations)state.vacations={};
+  if(!state.vacations[mk])state.vacations[mk]={};
+  const days=parseFloat(v)||0;
+  if(days>0)state.vacations[mk][eid]=days;
+  else delete state.vacations[mk][eid];
+  saveState();renderPage();
+}
+function resetEmpHours(eid,mk){
+  const e=state.employees.find(x=>x.id===eid);
+  if(e&&e.monthlyHours){delete e.monthlyHours[mk];saveState();renderPage();}
+}
+function deleteEmployee(id){
+  if(!confirm('למחוק עובד זה?'))return;
+  state.employees=state.employees.filter(e=>e.id!==id);
+  Object.keys(state.matrix).forEach(mk=>{delete state.matrix[mk][id];});
+  saveState();renderPage();
+}
+
+function buildAllocationMsg(e,m){
+  const ml=MONTHS.find(x=>x.key===m)?.label||m;
+  const ed=(state.matrix[m]||{})[e.id]||{};
+  const alloc=getEmpAllocated(e.id,m),avail=getEmpHours(e,m);
+  const lines=Object.entries(ed)
+    .filter(([,h])=>(parseFloat(h)||0)>0)
+    .map(([cid,h])=>{const c=state.clients.find(x=>x.id===cid);return `• ${c?c.name:cid}: ${h}h`;})
+    .join('\n');
+  return `היי ${e.name},\nהנה הקצאת השעות שלך לחודש ${ml}:\n\n${lines||'אין הקצאות'}\n\nסה״כ: ${alloc}/${avail}h`;
+}
+
+function getEditedMsg(eid){
+  const ta=document.getElementById('alloc-msg-'+eid);
+  return ta?ta.value:buildAllocationMsg(state.employees.find(x=>x.id===eid),state.currentMonth);
+}
+
+function sendAllocation(eid){
+  const e=state.employees.find(x=>x.id===eid);
+  if(!e)return;
+  const m=state.currentMonth,ml=MONTHS.find(x=>x.key===m)?.label||m;
+  const msg=buildAllocationMsg(e,m);
+  const hasEmail=!!e.email,hasSlack=!!e.slackWebhook;
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:500px">
+      <div class="modal-hd">
+        <div class="modal-t">שליחת הקצאה — ${e.name}</div>
+        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-bd">
+        <label class="fl" style="margin-bottom:6px">הודעה (ניתן לערוך)</label>
+        <textarea id="alloc-msg-${eid}" rows="8" class="fi" style="font-size:13px;line-height:1.7;font-family:inherit;resize:vertical">${msg}</textarea>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <button class="btn btn-p" ${hasEmail?'':'disabled title="לא הוגדר אימייל לעובד"'}
+            onclick="window.open('mailto:${e.email||''}?subject=הקצאת שעות ${ml}&body='+encodeURIComponent(getEditedMsg('${eid}')))">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><polyline points="1,3.5 7,8.5 13,3.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            שלח במייל${hasEmail?' → '+e.email:' (לא הוגדר אימייל)'}
+          </button>
+          <button class="btn btn-p" style="background:#4a154b" ${hasSlack?'':'disabled title="לא הוגדר Slack Webhook"'}
+            onclick="sendSlackMsg('${eid}',getEditedMsg('${eid}'),this)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            שלח ב-Slack${hasSlack?'':' (לא הוגדר Webhook)'}
+          </button>
+          <button class="btn btn-s" onclick="navigator.clipboard.writeText(getEditedMsg('${eid}')).then(()=>alert('הועתק ✓'))">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="2" width="8" height="10" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M4 4H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-1" stroke="currentColor" stroke-width="1.3"/></svg>
+            העתק הודעה
+          </button>
+        </div>
+      </div>
+      <div class="modal-ft"><button class="btn btn-s" onclick="closeModal()">סגור</button></div>
+    </div>
+  </div>`;
+}
+
+async function sendSlackMsg(eid,msg,btn){
+  const e=state.employees.find(x=>x.id===eid);
+  if(!e?.slackWebhook)return;
+  if(btn){btn.disabled=true;btn.textContent='שולח...';}
+  try{
+    const r=await fetch(e.slackWebhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg})});
+    if(r.ok||r.type==='opaque'){
+      if(btn){btn.textContent='✓ נשלח';btn.style.background='var(--success)';}
+    }else{
+      if(btn){btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח ב-Slack';}
+      alert('שגיאה בשליחה ל-Slack: '+r.status);
+    }
+  }catch(err){
+    if(btn){btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח ב-Slack';}
+    navigator.clipboard.writeText(msg).then(()=>alert('לא ניתן לשלוח ישירות (CORS).\nההודעה הועתקת ללוח — הדבק ב-Slack ידנית.'));
+  }
+}
+
+function sendAllAllocations(){
+  const m=state.currentMonth,ml=MONTHS.find(x=>x.key===m)?.label||m;
+  const emps=state.employees.filter(e=>e.visible!==false);
+  const rows=emps.map(e=>{
+    const msg=buildAllocationMsg(e,m);
+    const hasEmail=!!e.email,hasSlack=!!e.slackWebhook;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-weight:600;font-size:13px">${e.name}</span>
+      <button id="sa-email-${e.id}" class="btn btn-s btn-sm" ${hasEmail?'':'disabled'} title="${hasEmail?e.email:'לא הוגדר אימייל'}"
+        onclick="window.open('mailto:${e.email||''}?subject=הקצאת שעות ${ml}&body='+encodeURIComponent(buildAllocationMsg(state.employees.find(x=>x.id==='${e.id}'),state.currentMonth)));this.innerHTML='<svg width=&quot;12&quot; height=&quot;12&quot; viewBox=&quot;0 0 12 12&quot; fill=&quot;none&quot;><path d=&quot;M2 6l3 3 5-5&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/></svg>';this.style.color='var(--success)'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><polyline points="1,3.5 7,8.5 13,3.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>${hasEmail?'':' —'}
+      </button>
+      <button id="sa-slack-${e.id}" class="btn btn-s btn-sm" style="${hasSlack?'background:#4a154b;color:#fff':''}" ${hasSlack?'':'disabled'} title="${hasSlack?'Slack Webhook':'לא הוגדר Webhook'}"
+        onclick="sendSlackMsg('${e.id}',buildAllocationMsg(state.employees.find(x=>x.id==='${e.id}'),state.currentMonth),this)">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>${hasSlack?'':' —'}
+      </button>
+    </div>`;
+  }).join('');
+  const slackCount=emps.filter(e=>e.slackWebhook).length;
+  const emailCount=emps.filter(e=>e.email).length;
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-hd">
+        <div class="modal-t">שליחה לכל העובדים — ${ml}</div>
+        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <button class="btn btn-p" style="flex:1" ${emailCount?'':'disabled'}
+            onclick="sendAllEmails()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><polyline points="1,3.5 7,8.5 13,3.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח לכל במייל (${emailCount})</button>
+          <button class="btn btn-p" style="flex:1;background:#4a154b" ${slackCount?'':'disabled'}
+            onclick="sendAllSlack()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח לכל ב-Slack (${slackCount})</button>
+        </div>
+        <div style="max-height:380px;overflow-y:auto">${rows}</div>
+      </div>
+      <div class="modal-ft"><button class="btn btn-s" onclick="closeModal()">סגור</button></div>
+    </div>
+  </div>`;
+}
+
+function sendAllEmails(){
+  const m=state.currentMonth,ml=MONTHS.find(x=>x.key===m)?.label||m;
+  const emps=state.employees.filter(e=>e.visible!==false&&e.email);
+  emps.forEach((e,i)=>setTimeout(()=>{
+    window.open(`mailto:${e.email}?subject=הקצאת שעות ${ml}&body=${encodeURIComponent(buildAllocationMsg(e,m))}`);
+    const btn=document.getElementById('sa-email-'+e.id);
+    if(btn){btn.textContent='✓';btn.style.color='var(--success)';}
+  },i*300));
+}
+
+async function sendAllSlack(){
+  const m=state.currentMonth;
+  const emps=state.employees.filter(e=>e.visible!==false&&e.slackWebhook);
+  await Promise.all(emps.map(e=>sendSlackMsg(e.id,buildAllocationMsg(e,m),document.getElementById('sa-slack-'+e.id))));
+}
+
+function clientTypeBadge(type){
+  if(type==='retainer')return'<span class="badge b-ret">ריטיינר</span>';
+  if(type==='project')return'<span class="badge b-proj">פרויקט</span>';
+  return'<span class="badge b-int">פנימי</span>';
+}
+function clientTypeLabel(type){
+  if(type==='retainer')return'ריטיינר';
+  if(type==='project')return'פרויקט';
+  return'פנימי';
+}
+const MONTH_NAMES_HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+function mkLabel(mk){
+  const mo=MONTHS.find(x=>x.key===mk);
+  if(mo)return mo.label;
+  const[y,m]=mk.split('-').map(Number);
+  return `${MONTH_NAMES_HE[m-1]} ${y}`;
+}
+function mkKey(y,m){return `${y}-${String(m).padStart(2,'0')}`;}
+
+function openNewMonthModal(){
+  // Default: next month after last active, in current year
+  const active=state.activeMonths||[];
+  const now=new Date();
+  const defaultY=now.getFullYear()<2026?2026:now.getFullYear();
+  // Find first month of defaultY not yet active
+  let defaultMk=null;
+  for(let m=1;m<=12;m++){const k=mkKey(defaultY,m);if(!active.includes(k)){defaultMk=k;break;}}
+  if(!defaultMk)defaultMk=mkKey(defaultY+1,1);
+  openMonthSetupModal(defaultMk);
+}
+
+function openMonthSetupModal(mk){
+  mk=mk||state.currentMonth;
+  _ncIdx=0;_vacIdx=0;
+  const ml=MONTHS.find(x=>x.key===mk)?.label||mk;
+  const[y,m]=mk.split('-').map(Number);
+  const last=new Date(y,m,0).getDate();
+  if(!state.monthSetup)state.monthSetup={};
+  if(!state.vacations)state.vacations={};
+
+  // Build calendar grid (Sun=0 .. Sat=6, work days Sun-Thu)
+  const DAY_NAMES=['א','ב','ג','ד','ה','ו','ש'];
+  const firstDow=new Date(y,m-1,1).getDay();
+  let cells=[];
+  for(let i=0;i<firstDow;i++)cells.push('<td></td>');
+  for(let d=1;d<=last;d++){
+    const dow=new Date(y,m-1,d).getDay();
+    const key=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const h=getHolidays(y)[key];
+    const isWeekend=dow===5||dow===6;
+    let bg='',title='',label='';
+    if(isWeekend){bg='background:#f1f5f9;color:#94a3b8';}
+    else if(h&&h.type==='holiday'){bg='background:#fee2e2;color:#b91c1c';title=h.name;label='<div style="font-size:8px;line-height:1;margin-top:1px">'+(h.name.length>6?h.name.slice(0,6)+'…':h.name)+'</div>';}
+    else if(h&&h.type==='eve'){bg='background:#fef9c3;color:#92400e';title=h.name;label='<div style="font-size:8px;line-height:1;margin-top:1px">½</div>';}
+    else{bg='background:#f0fdf4;color:#166534';}
+    cells.push('<td style="text-align:center;padding:4px 2px;border-radius:4px;'+bg+'" title="'+title+'"><div style="font-weight:600;font-size:13px">'+d+'</div>'+label+'</td>');
+    if(dow===6&&d<last){cells.push('</tr><tr>');}
+  }
+  const calRows=cells.join('');
+
+  const {full,half,off,effective}=calcMonthWorkDays(mk);
+  const customDays=state.monthSetup[mk]?.workDays;
+  const suggestedDays=customDays!==undefined?customDays:effective;
+
+  // Vacation rows — only employees with existing vacation days
+  const vacRows=state.employees.filter(e=>(state.vacations[mk]?.[e.id]||0)>0).map(e=>{
+    const vac=(state.vacations[mk]?.[e.id])||0;
+    const scope=(e.scope!=null?e.scope:100)/100;
+    // use suggestedDays (= live modal value) so the preview matches what the user sees in the modal
+    const base=e.monthlyHours?.[mk]!==undefined?e.monthlyHours[mk]:Math.round(suggestedDays*7*scope);
+    const afterVac=Math.max(0,base-Math.round(vac*7*scope));
+    const previewTxt='<span style="color:var(--muted-2);font-size:11px">'+base+'h</span> <span style="font-size:11px;color:var(--muted-2)">→</span> <span style="font-weight:600;font-size:12px;color:var(--primary)">'+afterVac+'h</span>';
+    const uid='vr_'+e.id;
+    return '<div data-vac-row="'+uid+'" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="flex:1;font-size:13px">'+e.name+'</span>'
+      +'<span id="vac-preview-'+e.id+'" style="min-width:80px;text-align:left">'+previewTxt+'</span>'
+      +'<input type="number" min="0" max="30" class="fi" style="width:70px;padding:4px 8px;text-align:center"'
+      +' value="'+vac+'" data-vaceid="'+e.id+'" oninput="updateVacPreview(this,\''+mk+'\')">'
+      +'<span style="font-size:11px;color:var(--muted)">ימים</span>'
+      +'<button class="btn btn-s btn-sm" onclick="removeVacRow(\''+uid+'\')" style="padding:2px 7px">✕</button>'
+      +'</div>';
+  }).join('');
+
+
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-hd">
+        <div class="modal-t" style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="11.5" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M1.5 7h13" stroke="currentColor" stroke-width="1.4"/></svg> הוספת חודש חדש</div>
+        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-bd" style="display:flex;flex-direction:column;gap:18px">
+
+        <div>
+          <label class="fl">בחר חודש</label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <button class="btn btn-s btn-sm" onclick="openMonthSetupModal(mkKey(${y}-1,${m}))">‹ שנה קודמת</button>
+              <span style="font-weight:700;font-size:15px;color:var(--text)">${y}</span>
+              <button class="btn btn-s btn-sm" onclick="openMonthSetupModal(mkKey(${y}+1,${m}))">שנה הבאה ›</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+              ${MONTH_NAMES_HE.map((name,i)=>{
+                const thisMk=mkKey(y,i+1);
+                const isActive=(state.activeMonths||[]).includes(thisMk);
+                const isSel=thisMk===mk;
+                return `<button class="btn btn-sm" style="padding:7px 4px;font-size:12px;justify-content:center;${isSel?'background:var(--primary);color:#fff;':isActive?'background:#e2e8f0;color:var(--muted);':'background:var(--surface);border:1px solid var(--border);color:var(--text);'}${isActive&&!isSel?'cursor:default;':''}"
+                  ${isActive&&!isSel?'disabled title="חודש קיים"':''}
+                  onclick="openMonthSetupModal('${thisMk}')">${name}${isActive&&!isSel?'<span style=\'font-size:9px\'>✓</span>':''}</button>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="fl" style="margin-bottom:8px">לוח שנה</div>
+          <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:separate;border-spacing:2px">
+            <thead><tr>${DAY_NAMES.map(d=>'<th style="text-align:center;font-size:11px;color:var(--muted);padding:3px">'+d+'</th>').join('')}</tr></thead>
+            <tbody><tr>${calRows}</tr></tbody>
+          </table></div>
+          <div style="display:flex;gap:12px;margin-top:8px;font-size:12px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#f0fdf4;border-radius:2px;display:inline-block"></span> יום עבודה מלא (${full})</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#fef9c3;border-radius:2px;display:inline-block"></span> ערב חג – חצי יום (${half})</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#fee2e2;border-radius:2px;display:inline-block"></span> חג (${off})</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="fl">ימי עבודה אפקטיביים בחודש</label>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">חישוב אוטו: ${full} מלאים + ${half}×½ ערבי חג = <b>${effective}</b> ימים = <b>${Math.round(effective*7)}h</b></div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <input type="number" id="ms-days" class="fi" style="width:90px" min="0" max="31" step="0.5" value="${suggestedDays}" oninput="onMsDaysChange(this.value,'${mk}')">
+            <span style="font-size:13px;color:var(--muted)">ימים = <b id="ms-hours-preview">${Math.round(suggestedDays*7)}h</b> לעובד</span>
+            <button class="btn btn-s btn-sm" onclick="document.getElementById('ms-days').value=${effective};onMsDaysChange(${effective},'${mk}')">אפס לאוטו</button>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <label class="fl" style="margin:0">ימי חופש לעובדים (${ml})</label>
+            <button class="btn btn-p btn-sm" onclick="addVacRow('${mk}')">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              הוסף חופשת עובד
+            </button>
+          </div>
+          <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);padding:${vacRows?'6px 10px':'0'}" id="vac-list">${vacRows}</div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <label class="fl" style="margin:0">לקוחות חדשים לחודש זה</label>
+            <button class="btn btn-p btn-sm" onclick="addNewClientForm('${mk}','${ml}')">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              הוסף לקוח
+            </button>
+          </div>
+          <div id="nc-list" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
+
+      </div>
+      <div class="modal-ft">
+        <button class="btn btn-s" onclick="closeModal()">ביטול</button>
+        <button class="btn btn-p" onclick="saveMonthSetup('${mk}')">שמור</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function updateVacPreview(inp,mk,overrideWorkDays){
+  const eid=inp.dataset.vaceid;
+  const e=state.employees.find(x=>x.id===eid);
+  if(!e)return;
+  const scope=(e.scope!=null?e.scope:100)/100;
+  // if caller supplies overrideWorkDays, compute base from it instead of saved state
+  let base;
+  if(overrideWorkDays!==undefined){
+    base=Math.round(overrideWorkDays*7*scope);
+  } else {
+    base=e.monthlyHours?.[mk]!==undefined?e.monthlyHours[mk]:calcAutoHoursForEmp(e,mk);
+  }
+  const vac=parseFloat(inp.value)||0;
+  const preview=document.getElementById('vac-preview-'+eid);
+  if(!preview)return;
+  if(vac>0){
+    const afterVac=Math.max(0,base-Math.round(vac*7*scope));
+    preview.innerHTML='<span style="color:var(--muted-2);font-size:11px">'+base+'h</span> <span style="font-size:11px;color:var(--muted-2)">→</span> <span style="font-weight:600;font-size:12px;color:var(--primary)">'+afterVac+'h</span>';
+  } else {
+    preview.innerHTML='<span style="font-weight:600;font-size:12px">'+base+'h</span>';
+  }
+}
+
+function onMsDaysChange(val,mk){
+  const days=parseFloat(val)||0;
+  document.getElementById('ms-hours-preview').textContent=Math.round(days*7)+'h';
+  // recalculate all vacation previews with the new workdays value
+  document.querySelectorAll('[data-vaceid]').forEach(inp=>updateVacPreview(inp,mk,days));
+}
+
+let _vacIdx=0;
+
+function addVacRow(mk){
+  const list=document.getElementById('vac-list');
+  if(!list)return;
+  const existingEids=new Set([...document.querySelectorAll('[data-vaceid]')].map(el=>el.dataset.vaceid).filter(Boolean));
+  const available=state.employees.filter(e=>!existingEids.has(e.id));
+  if(!available.length){alert('כל העובדים כבר נוספו');return;}
+  const uid='vr'+(_vacIdx++);
+  const opts=available.map(e=>'<option value="'+e.id+'">'+e.name+'</option>').join('');
+  const row=document.createElement('div');
+  row.dataset.vacRow=uid;
+  row.style.cssText='display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)';
+  row.innerHTML='<select class="fi" style="flex:1;padding:4px 8px" onchange="activateVacRow(this,\''+mk+'\',\''+uid+'\')">'
+    +'<option value="">בחר עובד</option>'+opts+'</select>'
+    +'<span id="vac-preview-'+uid+'" style="min-width:80px;text-align:left"></span>'
+    +'<input type="number" min="0" max="30" class="fi" style="width:70px;padding:4px 8px;text-align:center" value="" data-vaceid="" oninput="updateVacPreview(this,\''+mk+'\')" disabled>'
+    +'<span style="font-size:11px;color:var(--muted)">ימים</span>'
+    +'<button class="btn btn-s btn-sm" onclick="removeVacRow(\''+uid+'\')" style="padding:2px 7px">✕</button>';
+  // ensure the container has padding when rows exist
+  list.style.padding='6px 10px';
+  list.appendChild(row);
+}
+
+function activateVacRow(sel,mk,uid){
+  const eid=sel.value;
+  if(!eid)return;
+  const row=document.querySelector('[data-vac-row="'+uid+'"]');
+  if(!row)return;
+  const inp=row.querySelector('input[type="number"]');
+  inp.dataset.vaceid=eid;
+  inp.disabled=false;
+  inp.value=(state.vacations[mk]?.[eid])||'';
+  // move preview span id to eid so updateVacPreview can find it
+  const preview=document.getElementById('vac-preview-'+uid);
+  if(preview)preview.id='vac-preview-'+eid;
+  const e=state.employees.find(x=>x.id===eid);
+  const nameSpan=document.createElement('span');
+  nameSpan.style.cssText='flex:1;font-size:13px';
+  nameSpan.textContent=e?e.name:'';
+  sel.replaceWith(nameSpan);
+  // pass the live ms-days value so the preview reflects the current modal setting, not stale saved state
+  const msDaysEl=document.getElementById('ms-days');
+  const wdLive=msDaysEl?parseFloat(msDaysEl.value):NaN;
+  updateVacPreview(inp,mk,!isNaN(wdLive)?wdLive:undefined);
+}
+
+function removeVacRow(uid){
+  const row=document.querySelector('[data-vac-row="'+uid+'"]');
+  if(!row)return;
+  row.remove();
+  const list=document.getElementById('vac-list');
+  if(list&&!list.querySelector('[data-vac-row]'))list.style.padding='0';
+}
+
+let _ncIdx=0;
+
+function addNewClientForm(mk,ml){
+  const list=document.getElementById('nc-list');
+  if(!list)return;
+  const idx=_ncIdx++;
+  const empRows=state.employees.map(e=>`
+    <label class="pref-item">
+      <input type="checkbox" data-nc-emp-${idx}="${e.id}">
+      <span style="flex:1">${e.name}</span>
+      ${e.role?`<span style="font-size:10px;color:var(--muted)">${e.role}</span>`:''}
+    </label>`).join('');
+  const card=document.createElement('div');
+  card.dataset.ncCard=idx;
+  card.innerHTML=`
+    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px;position:relative">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:600;color:var(--muted)">לקוח חדש</span>
+        <button class="btn btn-s btn-sm" style="padding:2px 7px" onclick="removeClientForm(${idx})">✕</button>
+      </div>
+      <div class="fg" style="margin:0">
+        <label class="fl">שם לקוח <span style="color:var(--danger)">*</span></label>
+        <input type="text" class="fi" id="nc-name-${idx}" placeholder="שם הלקוח החדש">
+      </div>
+      <div class="fg" style="margin:0">
+        <label class="fl">סוג לקוח</label>
+        <select class="fs" id="nc-type-${idx}" onchange="toggleNcFields(${idx},this.value)">
+          <option value="retainer">ריטיינר</option>
+          <option value="project">פרויקט</option>
+          <option value="internal">פנימי</option>
+        </select>
+      </div>
+      <div id="nc-bank-${idx}" style="display:none">
+        <div class="fg" style="margin:0">
+          <label class="fl">בנק שעות (תקציב פרויקט)</label>
+          <input type="number" class="fi" id="nc-bankval-${idx}" min="0" placeholder="סה״כ שעות">
+        </div>
+      </div>
+      <div id="nc-hrs-${idx}">
+        <div class="fg" style="margin:0">
+          <label class="fl">שעות ב${ml}</label>
+          <input type="number" class="fi" id="nc-hours-${idx}" min="0" placeholder="0" style="width:120px">
+        </div>
+      </div>
+      <div class="fg" style="margin:0">
+        <label class="fl">עובדים משויכים</label>
+        <div class="pref-grid" style="max-height:130px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:6px">
+          ${empRows}
+        </div>
+      </div>
+    </div>`;
+  list.appendChild(card);
+  document.getElementById(`nc-name-${idx}`)?.focus();
+}
+
+function removeClientForm(idx){
+  const card=document.querySelector(`[data-nc-card="${idx}"]`);
+  if(card)card.remove();
+}
+
+function toggleNcFields(idx,type){
+  const bank=document.getElementById(`nc-bank-${idx}`);
+  const hrs=document.getElementById(`nc-hrs-${idx}`);
+  if(bank)bank.style.display=type==='project'?'':'none';
+  if(hrs)hrs.style.display=type==='internal'?'none':'';
+}
+
+function saveMonthSetup(mk){
+  if(!state.monthSetup)state.monthSetup={};
+  if(!state.vacations)state.vacations={};
+  const days=parseFloat(document.getElementById('ms-days').value);
+  if(!isNaN(days))state.monthSetup[mk]={workDays:days};
+  if(!state.vacations[mk])state.vacations[mk]={};
+  document.querySelectorAll('[data-vaceid]').forEach(inp=>{
+    const eid=inp.dataset.vaceid;
+    if(!eid)return;
+    const v=parseFloat(inp.value)||0;
+    if(v>0)state.vacations[mk][eid]=v;
+    else delete state.vacations[mk][eid];
+  });
+  // ── Save all new client cards ──
+  document.querySelectorAll('[data-nc-card]').forEach(card=>{
+    const idx=card.dataset.ncCard;
+    const nameEl=document.getElementById(`nc-name-${idx}`);
+    if(!nameEl)return;
+    const name=nameEl.value.trim();
+    if(!name)return;
+    const type=document.getElementById(`nc-type-${idx}`)?.value||'retainer';
+    const hours=parseFloat(document.getElementById(`nc-hours-${idx}`)?.value)||0;
+    const bank=parseFloat(document.getElementById(`nc-bankval-${idx}`)?.value)||0;
+    const mh={};
+    if(hours>0)mh[mk]=hours;
+    const nc={id:'c'+Date.now()+'_'+idx,name,type,monthlyHours:mh};
+    if(type==='project'&&bank)nc.hoursBank=bank;
+    state.clients.push(nc);
+    const clientId=nc.id;
+    state.employees.forEach(e=>{
+      const cb=card.querySelector(`[data-nc-emp-${idx}="${e.id}"]`);
+      if(cb?.checked){
+        if(!e.preferredClients)e.preferredClients=[];
+        if(!e.preferredClients.includes(clientId))e.preferredClients.push(clientId);
+      }
+    });
+  });
+  state.clients.sort((a,b)=>a.name.localeCompare(b.name,'he'));
+  if(!state.activeMonths)state.activeMonths=[];
+  if(!state.activeMonths.includes(mk)){
+    state.activeMonths.push(mk);
+    state.activeMonths.sort();
+  }
+  state.currentMonth=mk;
+  saveState();initMonthSelect();closeModal();renderPage();
+}
+
+function copyAllocations(fromMk,toMk){
+  if(!state.matrix[fromMk]){alert('אין נתונים בחודש הנבחר');return;}
+  state.matrix[toMk]=JSON.parse(JSON.stringify(state.matrix[fromMk]));
+  saveState();renderPage();
+}
+
+function resetMonth(mk){
+  state.matrix[mk]={};
+  saveState();renderPage();
+}
+
+function openEmpModal(eid=null){
+  const e=eid?state.employees.find(x=>x.id===eid):null;
+  const currentScope=e?.scope!=null?e.scope:100;
+  const hf=MONTHS.map(mo=>{
+    const auto=Math.round(calcAutoHours(mo.key)*currentScope/100);
+    return `<div class="mcell">
+      <div class="mcell-lbl" id="mcell-lbl-${mo.key}">${mo.short}</div>
+      <div class="mcell-inp" id="mcell-val-${mo.key}" style="cursor:default;color:var(--text);font-weight:600;text-align:center;padding:7px 5px">${auto}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('modal-root').innerHTML=`
+  <div class="overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-hd">
+        <div class="modal-t">${e?'עריכת עובד':'הוספת עובד'}</div>
+        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div class="frow">
+          <div class="fg"><label class="fl">שם עובד</label>
+            <input type="text" class="fi" id="e-name" value="${e?.name||''}" placeholder="שם העובד"></div>
+          <div class="fg"><label class="fl">תפקיד</label>
+            <input type="text" class="fi" id="e-role" value="${e?.role||''}" placeholder="תפקיד (אופציונלי)"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label class="fl">אימייל</label>
+            <input type="email" class="fi" id="e-email" value="${e?.email||''}" placeholder="email@example.com"></div>
+          <div class="fg"><label class="fl">Slack Webhook URL</label>
+            <input type="url" class="fi" id="e-slack" value="${e?.slackWebhook||''}" placeholder="https://hooks.slack.com/...">
+            <div class="fhint">Incoming Webhook URL לשליחת הקצאה ישירות לסלאק</div></div>
+        </div>
+        <div class="fg">
+          <label class="fl">אחוזי משרה</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" class="fi" id="e-scope" value="${currentScope}" min="1" max="100" style="width:90px;text-align:center"
+              oninput="updateScopePreview(this.value)">
+            <span class="text-m text-sm">%</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              ${[25,50,60,75,80,100].map(p=>`<button type="button" class="btn btn-s btn-sm scope-preset" data-preset="${p}" style="padding:4px 8px;${currentScope===p?'background:var(--primary);color:#fff;border-color:var(--primary)':''}" onclick="document.getElementById('e-scope').value=${p};updateScopePreview(${p})">${p}%</button>`).join('')}
+            </div>
+          </div>
+          <div class="fhint">משפיע על חישוב השעות האוטומטי וניכוי ימי חופש. 100% = משרה מלאה.</div>
+        </div>
+        <div class="fg">
+          <label class="fl">תצוגת שעות לפי חודש <span class="text-m text-sm">(7h × ימי עבודה × % משרה)</span></label>
+          <div class="mgrid">${hf}</div>
+          <div class="fhint">לשינוי שעות ידני — ערוך ישירות בטבלת העובדים.</div>
+        </div>
+        <div class="fg">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+            <label class="fl" style="margin-bottom:0">★ לקוחות קבועים <span class="text-m text-sm">(עדיפות בפיזור אוטומטי)</span></label>
+            <button type="button" class="btn btn-s btn-sm" onclick="openClientModalFromEmp('${eid||''}')">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              לקוח חדש
+            </button>
+          </div>
+          <div class="pref-grid">
+            ${state.clients.map(c=>`
+              <label class="pref-item">
+                <input type="checkbox" data-pref="${c.id}" ${(e?.preferredClients||[]).includes(c.id)?'checked':''}>
+                <span style="flex:1">${c.name}</span>
+                <span style="font-size:10px;color:var(--muted)">${clientTypeLabel(c.type)}</span>
+              </label>`).join('')}
+          </div>
+          <div class="fhint">עובד עם לקוח קבוע יקבל עדיפות בהקצאת לקוח זה בפיזור אוטומטי.</div>
+        </div>
+      </div>
+      <div class="modal-ft">
+        <button class="btn btn-s" onclick="closeModal()">ביטול</button>
+        <button class="btn btn-p" onclick="saveEmployee('${eid||''}')">שמור</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function updateScopePreview(val){
+  const scope=Math.max(1,Math.min(100,Math.round(parseFloat(val)||100)));
+  const inp=document.getElementById('e-scope');
+  if(inp)inp.value=scope;
+  document.querySelectorAll('.scope-preset').forEach(btn=>{
+    const p=parseInt(btn.dataset.preset);
+    const active=p===scope;
+    btn.style.background=active?'var(--primary)':'';
+    btn.style.color=active?'#fff':'';
+    btn.style.borderColor=active?'var(--primary)':'';
+  });
+  // Update the read-only value cells in the monthly hours grid
+  MONTHS.forEach(mo=>{
+    const cell=document.getElementById('mcell-val-'+mo.key);
+    if(!cell)return;
+    cell.textContent=Math.round(calcAutoHours(mo.key)*scope/100);
+  });
+}
+function saveEmployee(eid){
+  const name=document.getElementById('e-name').value.trim();
+  const role=document.getElementById('e-role').value.trim();
+  if(!name){alert('יש להזין שם עובד');return;}
+  const scope=Math.max(1,Math.min(100,parseFloat(document.getElementById('e-scope')?.value)||100));
+  const prefClients=[...document.querySelectorAll('[data-pref]:checked')].map(i=>i.dataset.pref);
+  const email=document.getElementById('e-email').value.trim();
+  const slackWebhook=document.getElementById('e-slack').value.trim();
+  if(eid){const e=state.employees.find(x=>x.id===eid);if(e){e.name=name;e.role=role;e.scope=scope;e.preferredClients=prefClients;e.email=email;e.slackWebhook=slackWebhook;}}
+  else{state.employees.push({id:'e'+Date.now(),name,role,scope,visible:true,monthlyHours:{},preferredClients:prefClients,email,slackWebhook});state.employees.sort((a,b)=>a.name.localeCompare(b.name,'he'));}
+  saveState();closeModal();renderPage();
+}
+
+function openClientModalFromEmp(eid){
+  _empEditReturnId=eid||null;
+  openClientModal();
+}
+
+// ===================== MATRIX PAGE =====================
+function renderMatrix(){
+  const m=state.currentMonth,ml=MONTHS.find(x=>x.key===m)?.label||m;
+  if(!state.matrix[m])state.matrix[m]={};
+
+  // Only visible employees in matrix
+  const visEmps=state.employees.filter(e=>e.visible!==false);
+  const visClients=state.clients.filter(c=>
+    c.active!==false&&(
+      _showAll||
+      getClientHours(c,m)>0||
+      Object.values(state.matrix[m]).some(ed=>(parseFloat(ed[c.id])||0)>0)
+    ));
+
+  const focusedCids=_matrixFocusEmp
+    ?new Set(Object.entries(state.matrix[m][_matrixFocusEmp]||{}).filter(([,h])=>(parseFloat(h)||0)>0).map(([cid])=>cid))
+    :null;
+  const visCols=focusedCids?visClients.filter(c=>focusedCids.has(c.id)):visClients;
+
+  const cHeaders=visCols.map(c=>{
+    const cont=getClientHours(c,m),alloc=getClientAllocated(c.id,m),diff=alloc-cont;
+    const col=cont===0?'var(--muted)':diff>0?'var(--danger)':diff<0?'var(--warning)':'var(--success)';
+    return `<th class="mx-th-c">
+      <div title="${c.name}" style="max-width:90px;overflow:hidden;text-overflow:ellipsis">${c.name.length>11?c.name.slice(0,11)+'…':c.name}</div>
+      <div id="ch-${c.id}" style="font-size:10px;color:${col};margin-top:3px">${alloc}/${cont}h</div>
+      <div style="font-size:9px;color:var(--muted)">${clientTypeLabel(c.type)}</div>
+    </th>`;
+  }).join('');
+
+  const empRows=visEmps.map(e=>{
+    const ed=(state.matrix[m][e.id]||{});
+    const avail=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);
+    const ac=getEmpActiveClients(e.id,m),isOver=alloc>avail;
+    const isFocused=_matrixFocusEmp===e.id;
+    const dimRow=_matrixFocusEmp&&!isFocused;
+    const cells=visCols.map(c=>{
+      const val=parseFloat(ed[c.id])||0,hasAlloc=val>0,canAdd=ac<6||hasAlloc;
+      return `<td style="padding:0">
+        <input type="number" class="mx-inp" min="0" value="${val||''}" placeholder="—"
+          data-eid="${e.id}" data-cid="${c.id}"
+          style="${hasAlloc?'background:#eef2ff':''}" ${canAdd?'':'disabled title="עד 6 לקוחות"'}
+          onchange="onMatrixChange(this,'${m}')" onfocus="this.select()" oninput="onMatrixInput(this,'${m}')">
+      </td>`;
+    }).join('');
+    return `<tr style="${dimRow?'opacity:0.25;transition:opacity .15s':'transition:opacity .15s'}${isFocused?';background:#f0f4ff':''}">
+      <td class="mx-td-emp" style="cursor:pointer${isFocused?';background:#e8eeff':''}" onclick="_matrixFocusEmp=_matrixFocusEmp==='${e.id}'?null:'${e.id}';renderPage()" title="${isFocused?'לחץ לביטול הסינון':'לחץ להדגשת עובד'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+          <span>${isFocused?'<span style="color:var(--primary);margin-left:3px">◉</span>':''}<span>${e.name}</span>${(e.preferredClients||[]).length>0?'<span style="font-size:9px;color:var(--primary);margin-right:3px">★</span>':''}</span>
+          <span id="et-${e.id}" class="mx-emp-tot${isOver?' over':''}">${alloc}/${avail}h${isOver?' ⚠':''}</span>
+        </div>
+        <div class="emp-sub"><span id="ac-${e.id}-${m}">${ac}</span>/6 לקוחות</div>
+      </td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  const cTots=visCols.map(c=>{
+    const cont=getClientHours(c,m),alloc=getClientAllocated(c.id,m);
+    const col=cont===0?'var(--muted)':alloc>cont?'var(--danger)':alloc===cont?'var(--success)':'var(--warning)';
+    return `<td id="ct-${c.id}" style="background:#f8fafc;padding:8px 10px;text-align:center;font-size:12px;font-weight:700;color:${col}">${alloc}/${cont}</td>`;
+  }).join('');
+
+
+  return `
+  <div class="page-hd flex items-c just-b">
+    <div><div class="page-title">מטריצת הקצאות</div>
+      <div class="page-sub">${ml} | ${visEmps.length} עובדים מוצגים | עד 6 לקוחות לעובד</div>
+    </div>
+    <span class="chip">${visClients.length} לקוחות</span>
+  </div>
+  <div class="flex gap2 mb4" style="flex-wrap:wrap;align-items:center">
+    <div class="legend-item"><span class="legend-dot" style="background:#eef2ff;border:1px solid #6366f1"></span> מוקצה</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#fff0f0;border:1px solid var(--danger)"></span> חריגה</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#f0fdf4;border:1px solid var(--success)"></span> תוך גבול</div>
+    <div style="flex:1"></div>
+    <span class="text-sm text-m">שורה: מוקצה / זמין | עמודה: מוקצה / מוזמן</span>
+  </div>
+
+  <!-- פעולות -->
+  ${(()=>{
+    const prevMks=(state.activeMonths||[]).filter(x=>x<m);
+    const copyBlock=prevMks.length?`
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">העתק מחודש</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="mx-copy-sel" class="fi" style="padding:4px 8px;font-size:12px;width:auto">
+            ${prevMks.slice().reverse().map(x=>`<option value="${x}">${mkLabel(x)}</option>`).join('')}
+          </select>
+          <button class="btn btn-s btn-sm" onclick="if(confirm('פעולה זו תחליף את כל ההקצאות הקיימות בחודש ${mkLabel(m)} — להמשיך?'))copyAllocations(document.getElementById('mx-copy-sel').value,'${m}')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="3" width="7" height="8" rx="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M4 3V2a1 1 0 011-1h5a1 1 0 011 1v7a1 1 0 01-1 1H9" stroke="currentColor" stroke-width="1.2"/></svg>
+            העתק
+          </button>
+        </div>
+      </div>
+      <div style="width:1px;background:var(--border);align-self:stretch"></div>`:'';
+    const totalCont=state.clients.filter(c=>c.active!==false&&c.type!=='internal').reduce((s,c)=>s+(getClientHours(c,m)||0),0);
+    const totalAlloc=getTotalAllocated(m);
+    const totalCap=visEmps.reduce((s,e)=>s+Math.round(getEmpHours(e,m)),0);
+    const utilPct=totalCap>0?Math.round(totalAlloc/totalCap*100):0;
+    const gap=totalCap-totalCont;
+    const utilCol=utilPct>=90?'var(--danger)':utilPct>=70?'var(--success)':'var(--warning)';
+    const gapCol=gap<0?'var(--danger)':gap===0?'var(--success)':'var(--muted)';
+    const clientCol=totalAlloc>=totalCont&&totalCont>0?'var(--success)':totalCont===0?'var(--muted)':'var(--warning)';
+    const kpiCard=(label,val,sub,col)=>`<div style="flex:1;min-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${label}</div>
+      <div style="font-size:22px;font-weight:700;color:${col};font-family:var(--font-mono,monospace)">${val}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>
+    </div>`;
+    const kpiBar=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+      ${kpiCard('שעות לקוחות',totalCont+'h','מוזמן החודש',clientCol)}
+      ${kpiCard('קיבולת עובדים',totalCap+'h',visEmps.length+' עובדים פעילים','var(--primary)')}
+      ${kpiCard('ניצולת',utilPct+'%',totalAlloc+'h מוקצה',utilCol)}
+      ${kpiCard('פער קיבולת',(gap>=0?'+':'')+gap+'h',gap>=0?'קיבולת עודפת':'חסר קיבולת',gapCol)}
+    </div>`;
+    return kpiBar+`<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+      <span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">פעולות</span>
+      <div style="width:1px;background:var(--border);align-self:stretch;min-height:32px"></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">ניהול חודש</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-success btn-sm" onclick="autoDistribute('${m}')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v2M6.5 10v2M1 6.5h2M10 6.5h2M2.8 2.8l1.4 1.4M8.8 8.8l1.4 1.4M2.8 10.2l1.4-1.4M8.8 4.2l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.3"/></svg> פיזור אוטומטי</button>
+          <button class="btn btn-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--danger);font-size:12px;display:flex;align-items:center;gap:5px" onclick="if(confirm('מחיקת כל ההקצאות של ${mkLabel(m)} — פעולה זו אינה הפיכה. להמשיך?'))resetMonth('${m}')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3h8M5 3V2h2v1M5 5v4M7 5v4M3 3l.5 7h5l.5-7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            נקה מטריצה
+          </button>
+        </div>
+      </div>
+      <div style="width:1px;background:var(--border);align-self:stretch;min-height:32px"></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">תצוגה</span>
+        <button class="btn btn-s btn-sm" onclick="_matrixView=_matrixView==='table'?'cards':'table';renderPage()">${_matrixView!=='table'?'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="9.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> טבלה':'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> כרטיסיות'}</button>
+      </div>
+    </div>`;
+  })()}
+  ${_matrixView!=='table'?`<div style="display:flex;gap:6px;margin-bottom:14px">
+    <button class="btn btn-sm" style="min-width:110px;${_matrixView==='cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="_matrixView='cards';renderPage()">👤 לפי עובד</button>
+    <button class="btn btn-sm" style="min-width:110px;${_matrixView==='client-cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="_matrixView='client-cards';renderPage()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 12V6l5-3.5 5 3.5v6" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><rect x="4.5" y="7.5" width="2" height="4.5" rx="0.4" fill="currentColor"/></svg> לפי לקוח</button>
+  </div>`:''}
+  <div class="mx-layout">
+    <div class="mx-wrap">
+      ${_matrixView==='client-cards'?(()=>{
+        const cards=visClients.map(c=>{
+          const cont=getClientHours(c,m),alloc=getClientAllocated(c.id,m);
+          const diff=alloc-cont;
+          const pct=cont>0?Math.min(100,Math.round(alloc/cont*100)):0;
+          const barCol=diff>0?'var(--danger)':diff===0&&cont>0?'var(--success)':'var(--warning)';
+          const statusCol=cont===0?'var(--muted)':diff>0?'var(--danger)':diff<0?'var(--warning)':'var(--success)';
+          const empRows=visEmps.map(e=>{
+            const h=parseFloat((state.matrix[m][e.id]||{})[c.id])||0;
+            if(!h)return '';
+            const isPref=(e.preferredClients||[]).includes(c.id);
+            return `<div class="emp-card-client-row">
+              <span>${isPref?'★ ':''}<b>${e.name}</b></span>
+              <span>${h}h</span>
+            </div>`;
+          }).filter(Boolean).join('');
+          return `<div class="emp-card">
+            <div class="emp-card-hd">
+              <strong>${c.name}</strong>
+              ${clientTypeBadge(c.type)}
+            </div>
+            <div class="emp-card-stat"><span>מוקצה / מוזמן</span><span style="color:${statusCol};font-weight:600">${alloc}/${cont}h</span></div>
+            <div class="progress" style="margin-bottom:8px"><div class="progress-bar" style="width:${pct}%;background:${barCol}"></div></div>
+            <div class="emp-card-clients">${empRows||'<span style="color:var(--muted);font-size:12px">אין עובדים מוקצים</span>'}</div>
+          </div>`;
+        }).join('');
+        return `<div class="emp-cards-grid" style="padding:4px 0">${cards}</div>`;
+      })():_matrixView==='cards'?(()=>{
+        const cards=visEmps.map(e=>{
+          const ed=(state.matrix[m][e.id]||{});
+          const avail=getEmpHours(e,m),alloc=getEmpAllocated(e.id,m);
+          const isOver=alloc>avail;
+          const pct=avail>0?Math.min(100,Math.round(alloc/avail*100)):0;
+          const barCol=isOver?'var(--danger)':pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)';
+          const clientEntries=Object.entries(ed).filter(([,h])=>(parseFloat(h)||0)>0);
+          const clientRows=clientEntries.map(([cid,h])=>{
+            const cl=state.clients.find(c=>c.id===cid);
+            const isPref=(e.preferredClients||[]).includes(cid);
+            return `<div class="emp-card-client-row">
+              <span>${isPref?'★ ':''}<b>${cl?cl.name:cid}</b></span>
+              <span>${h}h</span>
+            </div>`;
+          }).join('');
+          return `<div class="emp-card">
+            <div class="emp-card-hd">
+              <strong>${e.name}${(e.preferredClients||[]).length>0?'<span style="font-size:9px;color:var(--primary);margin-right:3px">★</span>':''}</strong>
+              <span class="chip${isOver?' chip-danger':''}" style="${isOver?'background:#fee2e2;color:var(--danger)':''}">${alloc}/${avail}h${isOver?' ⚠':''}</span>
+            </div>
+            <div class="emp-card-stat"><span>מוקצה</span><span>${pct}%</span></div>
+            <div class="progress" style="margin-bottom:8px"><div class="progress-bar" style="width:${pct}%;background:${barCol}"></div></div>
+            <div class="emp-card-clients">${clientRows||'<span style="color:var(--muted);font-size:12px">אין הקצאות</span>'}</div>
+          </div>`;
+        }).join('');
+        return `<div class="emp-cards-grid" style="padding:4px 0">${cards}</div>`;
+      })():`<table class="mx-tbl">
+        <thead><tr>
+          <th class="mx-th-emp">עובד</th>
+          ${cHeaders}
+        </tr></thead>
+        <tbody>
+          ${empRows}
+          <tr class="mx-c-tot">
+            <td class="mx-td-emp" style="font-size:12px;color:var(--muted)">סה״כ לקוח</td>
+            ${cTots}
+          </tr>
+        </tbody>
+      </table>`}
+    </div>
+  </div>`;
+}
+
+// ===================== AUTO-DISTRIBUTE =====================
+// Splits `total` (floored to nearest 5) proportionally by weights.
+// Returns multiples of 5 only. Sum ≤ total. Never exceeds input total.
+function _split5(weights, total){
+  const t5=Math.floor(total/5)*5;
+  if(!weights.length||t5<=0) return weights.map(()=>0);
+  const units=t5/5;
+  const wSum=weights.reduce((s,v)=>s+v,0)||weights.length;
+  const exact=weights.map(w=>(w/wSum)*units);
+  const fl=exact.map(v=>Math.floor(v));
+  let rem=units-fl.reduce((s,v)=>s+v,0);
+  exact.map((v,i)=>({i,f:v-fl[i]})).sort((a,b)=>b.f-a.f)
+       .forEach(({i})=>{ if(rem-->0) fl[i]++; });
+  return fl.map(v=>v*5);
+}
+
+function autoDistribute(mk){
+  const visEmps=state.employees.filter(e=>e.visible!==false);
+  if(!visEmps.length){alert('אין עובדים פעילים במטריצה. סמן עובדים בצ׳קבוקס.');return;}
+
+  const clients=state.clients.filter(c=>c.active!==false&&c.type!=='internal'&&getClientHours(c,mk)>0)
+    .sort((a,b)=>{
+      const aR=a.type==='project'?1:0,bR=b.type==='project'?1:0;
+      if(aR!==bR) return aR-bR;
+      return getClientHours(b,mk)-getClientHours(a,mk);
+    });
+  if(!clients.length){alert('אין לקוחות עם שעות בחודש זה. הגדר שעות ללקוחות תחילה.');return;}
+  if(!confirm(`פיזור אוטומטי ל-${mkLabel(mk)}: יאפס את ההקצאות ל-${visEmps.length} עובדים ויפזר לפי לקוחות קבועים. להמשיך?`)) return;
+
+  // ── init ──
+  if(!state.matrix[mk]) state.matrix[mk]={};
+  visEmps.forEach(e=>{ state.matrix[mk][e.id]={}; });
+
+  const rem={};
+  visEmps.forEach(e=>{ rem[e.id]=Math.floor(getEmpHours(e,mk)/5)*5; });
+
+  // clientRem: remaining quota per client — never goes negative, never exceeded
+  const clientRem={};
+  clients.forEach(c=>{ clientRem[c.id]=getClientHours(c,mk); });
+
+  // לכל לקוח — רק עובדים שהלקוח מוגדר אצלהם כלקוח קבוע
+  for(const client of clients){
+    if(clientRem[client.id]<5) continue;
+
+    const eligible=visEmps
+      .filter(e=>(e.preferredClients||[]).includes(client.id)&&rem[e.id]>=5)
+      .sort((a,b)=>rem[b.id]-rem[a.id]); // מי שיש לו יותר קיבולת — קודם
+
+    if(!eligible.length) continue;
+
+    const quota=clientRem[client.id];
+    // חלוקה יחסית לפי קיבולת עובד, כפולות של 5, לא חורג מהמכסה
+    const caps=eligible.map(e=>Math.min(rem[e.id],quota));
+    const shares=_split5(caps, Math.min(quota, caps.reduce((s,v)=>s+v,0)));
+
+    eligible.forEach((emp,i)=>{
+      const share=Math.min(shares[i], rem[emp.id], clientRem[client.id]);
+      const share5=Math.floor(share/5)*5;
+      if(share5>=5){
+        state.matrix[mk][emp.id][client.id]=share5;
+        rem[emp.id]-=share5;
+        clientRem[client.id]-=share5;
+      }
+    });
+  }
+
+  // אין שלב 2 — שעות שנשארו לעובד נשארות ריקות לעדכון ידני
+
+  saveState();
+  renderPage();
+
+  const totalAssigned=visEmps.reduce((s,e)=>s+getEmpAllocated(e.id,mk),0);
+  const totalNeeded=clients.reduce((s,c)=>s+getClientHours(c,mk),0);
+  const clientsCovered=clients.filter(c=>clientRem[c.id]<5).length;
+  const empsWithGap=visEmps.filter(e=>rem[e.id]>=5);
+  setTimeout(()=>{
+    let msg=`פיזור אוטומטי הושלם!\n\nלקוחות שכוסו במלואם: ${clientsCovered}/${clients.length}\nשעות לקוחות שהוקצו: ${totalAssigned}h מתוך ${totalNeeded}h`;
+    if(empsWithGap.length)
+      msg+=`\n\nעובדים עם שעות פנויות לעדכון ידני (${empsWithGap.length}):\n`+
+           empsWithGap.map(e=>`• ${e.name}: ${rem[e.id]}h`).join('\n');
+    alert(msg);
+  },100);
+}
+
+// ===================== INSIGHTS PAGE =====================
+function _renderInsights_REMOVED(){
+  const mk=state.currentMonth;
+  const [yr,mo]=mk.split('-').map(Number);
+  const activeEmps=state.employees.filter(e=>!e.hidden);
+  const visClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+
+  // ── 1. Capacity & allocation totals ──
+  const totalCap=activeEmps.reduce((s,e)=>s+getEmpHours(e,mk),0);
+  const totalAlloc=getTotalAllocated(mk);
+  const utilPct=totalCap>0?Math.round(totalAlloc/totalCap*100):0;
+  const capColor=utilPct>100?'var(--danger)':utilPct>=80?'var(--success)':utilPct>=50?'var(--warning)':'var(--muted)';
+
+  // ── 2. Per-employee utilization ──
+  const empUtils=activeEmps.map(e=>{
+    const cap=getEmpHours(e,mk);
+    const alloc=getEmpAllocated(e.id,mk);
+    const pct=cap>0?Math.round(alloc/cap*100):0;
+    const vac=(state.vacations?.[mk]?.[e.id])||0;
+    return{e,cap,alloc,pct,vac};
+  }).sort((a,b)=>b.pct-a.pct);
+
+  // ── 3. Client coverage ──
+  const clientCov=visClients.map(c=>{
+    const planned=getClientHours(c,mk);
+    const alloc=getClientAllocated(c.id,mk);
+    const pct=planned>0?Math.round(alloc/planned*100):null;
+    return{c,planned,alloc,pct};
+  }).filter(x=>x.planned>0).sort((a,b)=>(a.pct??0)-(b.pct??0));
+
+  // ── 4. Holidays this month ──
+  const holidays=getHolidays(yr);
+  const monthHols=Object.entries(holidays)
+    .filter(([d])=>d.startsWith(mk))
+    .sort(([a],[b])=>a.localeCompare(b));
+  const wd=calcMonthWorkDays(mk);
+  const hoursLost=Math.round(wd.off*7+wd.half*3.5);
+
+  // ── 5. Vacation summary ──
+  const vacData=activeEmps.map(e=>({e,days:(state.vacations?.[mk]?.[e.id])||0}))
+    .filter(x=>x.days>0).sort((a,b)=>b.days-a.days);
+  const totalVacDays=vacData.reduce((s,x)=>s+x.days,0);
+
+  // ── 6. Project bank alerts ──
+  const projAlerts=state.clients.filter(c=>c.active!==false&&c.type==='project'&&c.hoursBank)
+    .map(c=>{
+      const remaining=getRemainingBankBefore(c,mk)+(c.billedHours?.[mk]||0);
+      const totalBilled=getTotalBilled(c);
+      const pct=c.hoursBank>0?Math.round(totalBilled/c.hoursBank*100):0;
+      return{c,remaining:getRemainingBankBefore(c,mk),pct,totalBilled};
+    }).sort((a,b)=>a.pct-b.pct);
+
+  // ── 7. Alerts list ──
+  const alerts=[];
+  const over=empUtils.filter(x=>x.pct>100);
+  const under=empUtils.filter(x=>x.pct<50&&x.cap>0);
+  const noAlloc=empUtils.filter(x=>x.alloc===0&&x.cap>0);
+  if(over.length)alerts.push({type:'danger',icon:'⚡',text:`${over.map(x=>x.e.name).join(', ')} — מוקצים מעל קיבולת (${over.map(x=>x.pct+'%').join(', ')})`});
+  if(noAlloc.length)alerts.push({type:'warn',icon:'○',text:`${noAlloc.map(x=>x.e.name).join(', ')} — אין הקצאות בכלל החודש`});
+  if(under.length&&!noAlloc.find(x=>under.find(y=>y.e.id===x.e.id)))alerts.push({type:'info',icon:'↓',text:`${under.map(x=>x.e.name).join(', ')} — ניצולת נמוכה (מתחת ל-50%)`});
+  const uncoveredClients=clientCov.filter(x=>x.alloc===0);
+  if(uncoveredClients.length)alerts.push({type:'warn',icon:'!',text:`לקוחות ללא כיסוי: ${uncoveredClients.map(x=>x.c.name).join(', ')}`});
+  const lowBank=projAlerts.filter(x=>x.remaining<20&&x.remaining>0);
+  if(lowBank.length)alerts.push({type:'danger',icon:'⚠',text:`בנק שעות נמוך: ${lowBank.map(x=>`${x.c.name} (נותר ${x.remaining}h)`).join(', ')}`});
+  if(utilPct>=90&&utilPct<=100)alerts.push({type:'ok',icon:'✓',text:`ניצולת מצוינת — ${utilPct}% מהקיבולת מנוצלת`});
+  if(hoursLost>0)alerts.push({type:'info',icon:'📅',text:`${monthHols.filter(([,v])=>v.type==='holiday').length} חגים החודש — ${hoursLost}h נגרעות מהקיבולת הבסיסית`});
+  if(totalVacDays>0)alerts.push({type:'info',icon:'🏖',text:`סה״כ ${totalVacDays} ימי חופשה לצוות החודש`});
+  if(!alerts.length)alerts.push({type:'ok',icon:'✓',text:'הכל תקין — אין התרעות לחודש זה'});
+
+  // ── Helpers ──
+  function utilBar(pct){
+    const w=Math.min(pct,100);
+    const col=pct>100?'var(--danger)':pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--muted-2)';
+    return `<div class="ins-bar-wrap"><div class="ins-bar" style="width:${w}%;background:${col}"></div></div>`;
+  }
+  function utilBadge(pct){
+    const col=pct>100?'b-danger':pct>=80?'b-ok':pct>=50?'b-warn':'b-none';
+    return `<span class="badge ${col}">${pct}%</span>`;
+  }
+
+  // ── KPI row ──
+  const kpis=`<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+    <div class="kpi p"><div class="kpi-accent"></div>
+      <div class="kpi-lbl">ניצולת כללית</div>
+      <div class="kpi-val" style="color:${capColor}">${utilPct}%</div>
+      <div class="kpi-sub">${totalAlloc}h מוקצים מתוך ${totalCap}h</div></div>
+    <div class="kpi s"><div class="kpi-accent"></div>
+      <div class="kpi-lbl">ימי עבודה אפקטיביים</div>
+      <div class="kpi-val">${wd.effective}</div>
+      <div class="kpi-sub">${wd.full} מלאים · ${wd.half} ערבי חג · ${wd.off} חגים</div></div>
+    <div class="kpi w"><div class="kpi-accent"></div>
+      <div class="kpi-lbl">ימי חופשה בצוות</div>
+      <div class="kpi-val">${totalVacDays}</div>
+      <div class="kpi-sub">${vacData.length} עובדים עם חופשה</div></div>
+    <div class="kpi d"><div class="kpi-accent"></div>
+      <div class="kpi-lbl">לקוחות פעילים</div>
+      <div class="kpi-val">${clientCov.length}</div>
+      <div class="kpi-sub">${clientCov.filter(x=>(x.pct||0)<100).length} עם כיסוי חלקי</div></div>
+  </div>`;
+
+  // ── Employee utilization section ──
+  const empSection=`<div class="ins-section">
+    <div class="ins-section-hd">
+      <div class="ins-section-icon" style="background:#eff6ff">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="3.5" r="2.5" stroke="#2563eb" stroke-width="1.3"/><path d="M1 12c0-2 1.8-3.5 4-3.5s4 1.5 4 3.5" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round"/><path d="M10.5 5.5v4M8.5 7.5h4" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div><div class="ins-section-title">ניצולת עובדים</div><div class="ins-section-sub">הקצאות מול קיבולת</div></div>
+    </div>
+    <div class="ins-section-bd">
+      ${empUtils.map(({e,cap,alloc,pct,vac})=>`
+        <div class="ins-row">
+          <div class="ins-row-name">${e.name}${vac>0?`<span style="font-size:10px;color:var(--muted);margin-right:4px">(${vac}d חופש)</span>`:''}</div>
+          ${utilBar(pct)}
+          <div class="ins-row-val" style="min-width:72px;text-align:left">${utilBadge(pct)}</div>
+          <div style="font-size:11px;color:var(--muted);min-width:70px;text-align:left">${alloc}/${cap}h</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // ── Client coverage section ──
+  const clientSection=`<div class="ins-section">
+    <div class="ins-section-hd">
+      <div class="ins-section-icon" style="background:#f0fdf4">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12V5.5l5-3.5 5 3.5V12" stroke="#16a34a" stroke-width="1.3" fill="none" stroke-linejoin="round"/><rect x="5" y="7.5" width="2.5" height="4.5" rx="0.5" fill="#16a34a"/></svg>
+      </div>
+      <div><div class="ins-section-title">כיסוי לקוחות</div><div class="ins-section-sub">הקצאות מול תכנון</div></div>
+    </div>
+    <div class="ins-section-bd">
+      ${clientCov.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין לקוחות עם שעות מתוכננות</div>`:''}
+      ${clientCov.map(({c,planned,alloc,pct})=>`
+        <div class="ins-row">
+          <div class="ins-row-name">${c.name}</div>
+          ${utilBar(pct??0)}
+          <div class="ins-row-val" style="min-width:72px;text-align:left">${utilBadge(pct??0)}</div>
+          <div style="font-size:11px;color:var(--muted);min-width:70px;text-align:left">${alloc}/${planned}h</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // ── Holiday section ──
+  const holSection=`<div class="ins-section">
+    <div class="ins-section-hd">
+      <div class="ins-section-icon" style="background:#faf5ff">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="3" width="10" height="9" rx="1.5" stroke="#7c3aed" stroke-width="1.3"/><path d="M5 2v2M9 2v2M2 6.5h10" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div><div class="ins-section-title">חגים ומועדים</div><div class="ins-section-sub">${hoursLost}h נגרעות מהקיבולת</div></div>
+    </div>
+    <div class="ins-section-bd">
+      ${monthHols.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין חגים בחודש זה</div>`:''}
+      <div class="ins-holiday-list">
+        ${monthHols.map(([d,h])=>`
+          <div class="ins-holiday ${h.type}">
+            <span>${h.name}</span>
+            <span style="font-size:11px;font-weight:600">${d.slice(8)} ב${['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][mo-1]}</span>
+          </div>`).join('')}
+      </div>
+      ${monthHols.length>0?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;gap:16px">
+        <span style="font-size:12px;color:var(--muted)"><span style="font-weight:600;color:var(--text)">${wd.off}</span> ימי חג מלאים</span>
+        <span style="font-size:12px;color:var(--muted)"><span style="font-weight:600;color:var(--text)">${wd.half}</span> ערבי חג (חצי יום)</span>
+      </div>`:''}
+    </div>
+  </div>`;
+
+  // ── Vacation section ──
+  const vacSection=`<div class="ins-section">
+    <div class="ins-section-hd">
+      <div class="ins-section-icon" style="background:#fff7ed">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4 1.5 2 4 2 6.5c0 3 2 5.5 5 6 3-.5 5-3 5-6 0-2.5-2-5-5-5z" stroke="#ea580c" stroke-width="1.3"/><path d="M7 4v3.5l2 1" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div><div class="ins-section-title">חופשות עובדים</div><div class="ins-section-sub">סה״כ ${totalVacDays} ימים</div></div>
+    </div>
+    <div class="ins-section-bd">
+      ${vacData.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין חופשות מוזנות לחודש זה</div>`:''}
+      ${vacData.map(({e,days})=>`
+        <div class="ins-row">
+          <div class="ins-row-name">${e.name}</div>
+          <div style="flex:1;font-size:11px;color:var(--muted)">${days} ימים</div>
+          <div class="ins-row-val" style="color:var(--warning)">−${Math.round(days*7*(e.scope??100)/100)}h</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // ── Project bank section ──
+  const bankSection=projAlerts.length>0?`<div class="ins-section">
+    <div class="ins-section-hd">
+      <div class="ins-section-icon" style="background:#f0fdf4">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="4" width="11" height="8" rx="1.5" stroke="#16a34a" stroke-width="1.3"/><path d="M4.5 4V3a2.5 2.5 0 015 0v1" stroke="#16a34a" stroke-width="1.3" stroke-linecap="round"/><path d="M7 7.5v1.5" stroke="#16a34a" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div><div class="ins-section-title">בנק שעות פרויקטים</div><div class="ins-section-sub">מעקב צריכה</div></div>
+    </div>
+    <div class="ins-section-bd">
+      ${projAlerts.map(({c,remaining,pct,totalBilled})=>`
+        <div class="ins-row">
+          <div class="ins-row-name">${c.name}</div>
+          <div class="ins-bar-wrap" style="flex:1"><div class="ins-bar" style="width:${Math.min(pct,100)}%;background:${pct>80?'var(--danger)':pct>50?'var(--warning)':'var(--success)'}"></div></div>
+          <div class="ins-row-val" style="min-width:60px;text-align:left;color:${remaining<20?'var(--danger)':'var(--muted)'}">נותר ${remaining}h</div>
+        </div>`).join('')}
+    </div>
+  </div>`:'';
+
+  // ── Alerts section ──
+  const alertSection=`<div class="ins-section ins-section-full">
+    <div class="ins-section-hd">
+      <div class="ins-section-icon" style="background:#fef2f2">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L1.5 11.5h11L7 2z" stroke="#dc2626" stroke-width="1.3" stroke-linejoin="round" fill="none"/><path d="M7 6v2.5" stroke="#dc2626" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="10" r=".7" fill="#dc2626"/></svg>
+      </div>
+      <div><div class="ins-section-title">התרעות ומסקנות</div><div class="ins-section-sub">סיכום מצב חודש ${mkLabel(mk)}</div></div>
+    </div>
+    <div class="ins-section-bd">
+      ${alerts.map(a=>`<div class="ins-alert ${a.type}"><span class="ins-alert-icon">${a.icon}</span><span>${a.text}</span></div>`).join('')}
+    </div>
+  </div>`;
+
+  // ── Trend comparison (current vs prev month) ──
+  const prevIdx=(state.activeMonths||[]).indexOf(mk)-1;
+  const prevMk=prevIdx>=0?(state.activeMonths||[])[prevIdx]:null;
+  let trendSection='';
+  if(prevMk){
+    const prevAlloc=getTotalAllocated(prevMk);
+    const prevCap=activeEmps.reduce((s,e)=>s+getEmpHours(e,prevMk),0);
+    const prevUtil=prevCap>0?Math.round(prevAlloc/prevCap*100):0;
+    const diff=utilPct-prevUtil;
+    const diffStr=diff>0?`+${diff}%`:diff<0?`${diff}%`:'ללא שינוי';
+    const diffCol=diff>0?'var(--success)':diff<0?'var(--danger)':'var(--muted)';
+    trendSection=`<div class="ins-section">
+      <div class="ins-section-hd">
+        <div class="ins-section-icon" style="background:#eff6ff">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 10.5L5 6l3 2.5L12 2.5" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        <div><div class="ins-section-title">השוואה לחודש קודם</div><div class="ins-section-sub">${mkLabel(prevMk)}</div></div>
+      </div>
+      <div class="ins-section-bd">
+        <div class="ins-stat-row"><span style="color:var(--muted)">ניצולת חודש נוכחי</span><span class="ins-stat-val">${utilPct}%</span></div>
+        <div class="ins-stat-row"><span style="color:var(--muted)">ניצולת חודש קודם</span><span class="ins-stat-val">${prevUtil}%</span></div>
+        <div class="ins-stat-row"><span style="color:var(--muted)">שינוי</span><span class="ins-stat-val" style="color:${diffCol}">${diffStr}</span></div>
+        <div class="ins-stat-row"><span style="color:var(--muted)">הקצאות חודש קודם</span><span class="ins-stat-val">${prevAlloc}h</span></div>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="page-hd">
+    <div class="page-title">תובנות</div>
+    <div class="page-sub">ניתוח אוטומטי של חודש ${mkLabel(mk)}</div>
+  </div>
+  ${kpis}
+  <div class="ins-grid">
+    ${empSection}
+    ${clientSection}
+    ${holSection}
+    ${vacSection}
+    ${bankSection}
+    ${trendSection}
+    ${alertSection}
+  </div>`;
+}
+
+
+// ===================== MATRIX INPUTS =====================
+function onMatrixInput(inp,mk){
+  const eid=inp.dataset.eid,cid=inp.dataset.cid;
+  const val=parseFloat(inp.value)||0;
+  if(!state.matrix[mk])state.matrix[mk]={};
+  if(!state.matrix[mk][eid])state.matrix[mk][eid]={};
+  if(val===0)delete state.matrix[mk][eid][cid];
+  else state.matrix[mk][eid][cid]=val;
+  inp.style.background=val>0?'#eef2ff':'';
+  // Update row total live
+  const alloc=getEmpAllocated(eid,mk);
+  const avail=getEmpHours(state.employees.find(e=>e.id===eid),mk);
+  const et=document.getElementById('et-'+eid);
+  if(et){
+    const isOver=alloc>avail;
+    et.className=`mx-emp-tot${isOver?' over':''}`;
+    et.textContent=`${alloc}/${avail}h${isOver?' ⚠':''}`;
+  }
+  const acEl=document.getElementById(`ac-${eid}-${mk}`);
+  if(acEl)acEl.textContent=getEmpActiveClients(eid,mk);
+  // Update column total + header for this client live
+  const c2=state.clients.find(x=>x.id===cid);
+  if(c2){
+    const cont2=getClientHours(c2,mk);
+    const alloc2=getClientAllocated(cid,mk);
+    const col2=cont2===0?'var(--muted)':alloc2>cont2?'var(--danger)':alloc2===cont2?'var(--success)':'var(--warning)';
+    const ctEl=document.getElementById(`ct-${cid}`);
+    if(ctEl){ctEl.style.color=col2;ctEl.textContent=`${alloc2}/${cont2}`;}
+    const chEl=document.getElementById(`ch-${cid}`);
+    if(chEl){chEl.style.color=col2;chEl.textContent=`${alloc2}/${cont2}h`;}
+  }
+}
+
+function onMatrixChange(inp,mk){
+  const eid=inp.dataset.eid,cid=inp.dataset.cid,val=parseFloat(inp.value)||0;
+  if(!state.matrix[mk])state.matrix[mk]={};
+  if(!state.matrix[mk][eid])state.matrix[mk][eid]={};
+  const ed=state.matrix[mk][eid];
+  const ac=Object.keys(ed).filter(k=>k!==cid&&(parseFloat(ed[k])||0)>0).length;
+  if(val>0&&ac>=6){
+    alert('לעובד '+state.employees.find(e=>e.id===eid)?.name+' כבר יש 6 לקוחות פעילים!');
+    inp.value='';delete ed[cid];inp.style.background='';return;
+  }
+  if(val===0)delete ed[cid];else ed[cid]=val;
+  saveState();
+  // Update column footer
+  document.querySelectorAll('.mx-c-tot td:not(.mx-td-emp)').forEach((td,i)=>{
+    const vc=state.clients.filter(c=>c.active!==false&&(_showAll||getClientHours(c,mk)>0||Object.values(state.matrix[mk]||{}).some(ed=>(parseFloat(ed[c.id])||0)>0)));
+    const c=vc[i];if(!c)return;
+    const cont=getClientHours(c,mk),alloc=getClientAllocated(c.id,mk);
+    td.style.color=cont===0?'var(--muted)':alloc>cont?'var(--danger)':alloc===cont?'var(--success)':'var(--warning)';
+    td.textContent=`${alloc}/${cont}`;
+  });
+}
+
+// ===================== UTILS =====================
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+function initMonthSelect(){
+  const sel=document.getElementById('month-select');
+  sel.innerHTML='';
+  (state.activeMonths||[state.currentMonth]).slice().sort().forEach(mk=>{
+    const mo=MONTHS.find(x=>x.key===mk);
+    const o=document.createElement('option');
+    o.value=mk;o.textContent=mkLabel(mk);
+    if(mk===state.currentMonth)o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+// ===================== WEEKLY SCHEDULE =====================
+const _wdName={0:'א׳',1:'ב׳',2:'ג׳',3:'ד׳',4:'ה׳'};
+const _wdFullName={0:'ראשון',1:'שני',2:'שלישי',3:'רביעי',4:'חמישי'};
+
+function normWS(val){if(!val)return[];return Array.isArray(val)?val:[val];}
+
+function _buildMonthWorkDays(mk){
+  const [yr,mo]=mk.split('-').map(Number);
+  const daysInMonth=new Date(yr,mo,0).getDate();
+  const holidays=new Set(state.monthSetup[mk]?.holidays||[]);
+  const wd=[];
+  for(let d=1;d<=daysInMonth;d++){const dow=new Date(yr,mo-1,d).getDay();if(dow!==5&&dow!==6&&!holidays.has(d))wd.push({d,dow});}
+  return wd;
+}
+
+function buildAutoMapMulti(allocs,allWorkDays){
+  const map={};
+  if(!allocs.length)return map;
+  // Group into calendar weeks
+  const weeks=[];let cur=[];
+  for(let i=0;i<allWorkDays.length;i++){
+    const wd=allWorkDays[i];
+    if(i>0&&wd.dow<=allWorkDays[i-1].dow){if(cur.length)weeks.push(cur);cur=[wd];}
+    else cur.push(wd);
+  }
+  if(cur.length)weeks.push(cur);
+
+  for(const week of weeks){
+    const weekMap={};week.forEach(wd=>{weekMap[wd.d]=[];});
+    const pinnedCids=new Set();
+    // Pin weeklyDay clients
+    for(const x of allocs){
+      const raw=x.client.weeklyDay;
+      if(raw===undefined||raw===null)continue;
+      const wds=Array.isArray(raw)?raw:[raw];
+      for(const wd of week){if(wds.includes(wd.dow)){weekMap[wd.d].push(x);pinnedCids.add(x.cid);}}
+    }
+    // All clients must appear ≥1 per week
+    const unpinned=allocs.filter(x=>!pinnedCids.has(x.cid));
+    const emptyDays=week.filter(wd=>weekMap[wd.d].length===0);
+    if(unpinned.length&&emptyDays.length){
+      for(let i=0;i<unpinned.length;i++)weekMap[emptyDays[i%emptyDays.length].d].push(unpinned[i]);
+    } else if(unpinned.length){
+      const sortedDays=[...week].sort((a,b)=>weekMap[a.d].length-weekMap[b.d].length);
+      unpinned.forEach((x,i)=>weekMap[sortedDays[i%sortedDays.length].d].push(x));
+    }
+    // Fill still-empty days with proportional top clients
+    const sorted=[...allocs].sort((a,b)=>b.h-a.h);
+    week.filter(wd=>weekMap[wd.d].length===0).forEach((wd,i)=>weekMap[wd.d].push(sorted[i%sorted.length]));
+    Object.entries(weekMap).forEach(([d,a])=>{map[d]=a;});
+  }
+  return map;
+}
+
+function clearWeeklySchedule(mk){
+  if(!confirm('לנקות את הסידור השבועי לחודש זה?'))return;
+  const allWorkDays=_buildMonthWorkDays(mk);
+  const emps=state.employees.filter(e=>e.visible!==false);
+  state.weeklySchedule[mk]={};
+  emps.forEach(function(emp){
+    state.weeklySchedule[mk][emp.id]={};
+    allWorkDays.forEach(function(wd){state.weeklySchedule[mk][emp.id][wd.d]=[];});
+  });
+  saveState();renderPage();
+}
+
+function autoWeeklyDistribute(mk){
+  const allWorkDays=_buildMonthWorkDays(mk);
+  const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+  const emps=state.employees.filter(e=>e.visible!==false);
+  if(!state.weeklySchedule[mk])state.weeklySchedule[mk]={};
+  emps.forEach(emp=>{
+    const monthAlloc=state.matrix[mk]?.[emp.id]||{};
+    const allocs=Object.entries(monthAlloc)
+      .map(([cid,h])=>({cid,h:parseFloat(h)||0,client:activeClients.find(c=>c.id===cid)}))
+      .filter(x=>x.h>0&&x.client).sort((a,b)=>b.h-a.h);
+    state.weeklySchedule[mk][emp.id]={};
+    if(!allocs.length)return;
+    const autoMap=buildAutoMapMulti(allocs,allWorkDays);
+    Object.entries(autoMap).forEach(([d,assignments])=>{
+      if(assignments.length)state.weeklySchedule[mk][emp.id][d]=assignments.map(x=>x.cid);
+    });
+  });
+  saveState();renderPage();
+}
+
+// ---- Excel-like cell editing ----
+function wsShowPopover(mk,eid,day,cellEl){
+  wsHidePopover();
+  const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+  const emp=state.employees.find(function(e){return e.id===eid;});
+  // Show all preferred clients of the employee (fallback: all active clients)
+  const prefCids=(emp&&emp.preferredClients&&emp.preferredClients.length)?emp.preferredClients:activeClients.map(function(c){return c.id;});
+  const clientsToShow=activeClients.filter(function(c){return prefCids.includes(c.id);});
+  if(!clientsToShow.length)return;
+  // Init saved map from auto if not yet saved
+  if(!state.weeklySchedule[mk])state.weeklySchedule[mk]={};
+  if(!state.weeklySchedule[mk][eid]){
+    const monthAlloc=state.matrix[mk]?.[eid]||{};
+    const allocs=Object.entries(monthAlloc)
+      .map(function(e){return{cid:e[0],h:parseFloat(e[1])||0,client:activeClients.find(function(c){return c.id===e[0];})};})
+      .filter(function(x){return x.h>0&&x.client;}).sort(function(a,b){return b.h-a.h;});
+    const aw=_buildMonthWorkDays(mk);
+    const am=buildAutoMapMulti(allocs,aw);
+    state.weeklySchedule[mk][eid]={};
+    Object.entries(am).forEach(function(e){if(e[1].length)state.weeklySchedule[mk][eid][e[0]]=e[1].map(function(x){return x.cid;});});
+    saveState();
+  }
+  const current=new Set(normWS(state.weeklySchedule[mk][eid][day]));
+  const div=document.createElement('div');
+  div.id='ws-popover';
+  div.style.cssText='position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--primary);border-radius:var(--r);padding:6px 4px;box-shadow:0 6px 24px rgba(0,0,0,0.18);min-width:160px;max-height:300px;overflow-y:auto';
+  div.innerHTML='<div style="font-size:10px;color:var(--muted);padding:2px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:4px">לקוחות של '+((emp&&emp.name)||'')+'</div>'+clientsToShow.map(function(c){return'<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'"><input type="checkbox" '+(current.has(c.id)?'checked':'')+'onchange="wsToggleClient(\''+mk+'\',\''+eid+'\','+day+',\''+c.id+'\',this.checked)" style="cursor:pointer;accent-color:var(--primary)">'+c.name+'</label>';}).join('');
+  document.body.appendChild(div);
+  const rect=cellEl.getBoundingClientRect();
+  const top=rect.bottom+4;
+  const left=Math.max(4,Math.min(rect.left,window.innerWidth-div.offsetWidth-4));
+  div.style.top=top+'px';div.style.left=left+'px';
+  setTimeout(function(){document.addEventListener('click',wsHandleOutsideClick,true);},30);
+}
+function wsHandleOutsideClick(e){
+  const pop=document.getElementById('ws-popover');
+  if(pop&&!pop.contains(e.target))wsHidePopover();
+}
+function wsHidePopover(){
+  const pop=document.getElementById('ws-popover');
+  if(pop)pop.remove();
+  document.removeEventListener('click',wsHandleOutsideClick,true);
+}
+function wsToggleClient(mk,eid,day,cid,checked){
+  if(!state.weeklySchedule[mk])state.weeklySchedule[mk]={};
+  if(!state.weeklySchedule[mk][eid])state.weeklySchedule[mk][eid]={};
+  const current=normWS(state.weeklySchedule[mk][eid][day]);
+  const newCids=checked?[...current.filter(function(c){return c!==cid;}),cid]:current.filter(function(c){return c!==cid;});
+  if(!newCids.length)delete state.weeklySchedule[mk][eid][day];
+  else state.weeklySchedule[mk][eid][day]=newCids;
+  saveState();
+  wsUpdateCellDisplay(mk,eid,day);
+}
+function wsUpdateCellDisplay(mk,eid,day){
+  const cellEl=document.getElementById('wc-'+eid+'-'+day);
+  if(!cellEl)return;
+  const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+  const cids=normWS(state.weeklySchedule[mk]?.[eid]?.[day]);
+  const clients=cids.map(function(cid){return{cid,client:activeClients.find(function(c){return c.id===cid;})};}).filter(function(x){return x.client;});
+  const hasManual=normWS(state.weeklySchedule[mk]?.[eid]?.[day]).length>0;
+  const [,moS]=mk.split('-');const mo=parseInt(moS);
+  const yr=parseInt(mk.split('-')[0]);
+  const dow=new Date(yr,mo-1,parseInt(day)).getDay();
+  cellEl.style.outline=hasManual?'2px solid #f59e0b':'';
+  cellEl.style.outlineOffset=hasManual?'-2px':'';
+  if(!clients.length){cellEl.innerHTML='<span style="color:var(--border);font-size:10px">—</span>';return;}
+  cellEl.innerHTML='<div style="display:flex;flex-direction:column;gap:2px">'+clients.map(function(a){const wda=a.client.weeklyDay!=null?(Array.isArray(a.client.weeklyDay)?a.client.weeklyDay:[a.client.weeklyDay]):[];const isWD=wda.includes(dow);const short=a.client.name.length>12?a.client.name.slice(0,12)+'…':a.client.name;return'<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-size:10px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+a.client.name+(isWD?' ★':'')+'">'+short+(isWD?' ★':'')+'</div>';}).join('')+'</div>';
+}
+
+function wsClientColors(){
+  const ac=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+  const m={};
+  ac.forEach((c,i)=>{m[c.id]=_wsPalette[i%_wsPalette.length];});
+  return m;
+}
+
+function renderWeeklySchedule(){
+  const mk=state.currentMonth;
+  const ml=mkLabel(mk);
+  const [,mo]=mk.split('-').map(Number);
+  const allWorkDays=_buildMonthWorkDays(mk);
+
+  const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+  const emps=state.employees.filter(e=>e.visible!==false);
+  if(!emps.length) return '<div class="page-hd"><div class="page-title">סידור שבועי</div></div><div style="text-align:center;padding:60px;color:var(--muted)">אין עובדים פעילים</div>';
+
+  // Group into calendar weeks
+  const weeks=[];let cur=[];
+  for(let i=0;i<allWorkDays.length;i++){
+    const wd=allWorkDays[i];
+    if(i>0&&wd.dow<=allWorkDays[i-1].dow){if(cur.length)weeks.push(cur);cur=[wd];}
+    else cur.push(wd);
+  }
+  if(cur.length)weeks.push(cur);
+  _weeklyWeekIdx=Math.max(0,Math.min(_weeklyWeekIdx,weeks.length-1));
+  const week=weeks[_weeklyWeekIdx];
+
+  // Build empData for this week
+  const empData=emps.map(function(emp){
+    const monthAlloc=state.matrix[mk]?.[emp.id]||{};
+    const allocs=Object.entries(monthAlloc)
+      .map(function(e){return{cid:e[0],h:parseFloat(e[1])||0,client:activeClients.find(function(c){return c.id===e[0];})};})
+      .filter(function(x){return x.h>0&&x.client;}).sort(function(a,b){return b.h-a.h;});
+    const autoMap=buildAutoMapMulti(allocs,allWorkDays);
+    const savedMap=state.weeklySchedule[mk]?.[emp.id];
+    const hasSaved=savedMap!==undefined;
+    const dayMap={};
+    week.forEach(function(wd){
+      if(hasSaved&&savedMap[wd.d]!==undefined){
+        dayMap[wd.d]=normWS(savedMap[wd.d]).map(function(cid){return{cid,client:activeClients.find(function(c){return c.id===cid;})};}).filter(function(x){return x.client;});
+      } else {
+        dayMap[wd.d]=autoMap[wd.d]||[];
+      }
+    });
+    const totalH=allocs.reduce(function(s,x){return s+x.h;},0);
+    const availH=Math.round(getEmpHours(emp,mk));
+    return{emp,allocs,totalH,availH,dayMap};
+  });
+
+  // Week tabs
+  const tabs=weeks.map(function(w,i){
+    const first=w[0],last=w[w.length-1];
+    const active=i===_weeklyWeekIdx;
+    return '<button class="btn btn-sm '+(active?'btn-p':'btn-s')+'" onclick="_weeklyWeekIdx='+i+';renderPage()" style="'+(active?'':'opacity:0.7')+'">שבוע '+(i+1)+' <span style="font-size:10px;opacity:0.8">('+first.d+'/'+mo+'–'+last.d+'/'+mo+')</span></button>';
+  }).join('');
+
+  // Column headers for this week
+  const colHeaders=week.map(function(wd){
+    return '<th style="padding:8px 12px;text-align:center;background:var(--surface-2);border:1px solid var(--border);min-width:120px;white-space:nowrap"><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+_wdName[wd.dow]+'</div><div style="font-size:14px;font-weight:700;color:var(--text)">'+wd.d+'/'+mo+'</div></th>';
+  }).join('');
+
+  // Rows
+  const rows=empData.map(function(ed){
+    const emp=ed.emp,allocs=ed.allocs,totalH=ed.totalH,availH=ed.availH,dayMap=ed.dayMap;
+    const pct=availH>0?Math.round(totalH/availH*100):0;
+    const pctCol=totalH>availH?'var(--danger)':pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--muted)';
+    const cells=week.map(function(wd){
+      const clients=dayMap[wd.d]||[];
+      const hasManual=normWS(state.weeklySchedule[mk]?.[emp.id]?.[wd.d]).length>0;
+      const manualOutline=hasManual?'outline:2px solid #f59e0b;outline-offset:-2px;':'';
+      // Cell content
+      let inner;
+      if(!clients.length){
+        inner='<span style="color:var(--border);font-size:11px;user-select:none">—</span>';
+      } else {
+        inner='<div style="display:flex;flex-direction:column;gap:3px">'+clients.map(function(a){
+          const wda=a.client.weeklyDay!=null?(Array.isArray(a.client.weeklyDay)?a.client.weeklyDay:[a.client.weeklyDay]):[];
+          const isWD=wda.includes(wd.dow);
+          const short=a.client.name.length>14?a.client.name.slice(0,14)+'…':a.client.name;
+          return '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+a.client.name+(isWD?' ★':'')+'">'+short+(isWD?' <span style="color:var(--primary)">★</span>':'')+'</div>';
+        }).join('')+'</div>';
+      }
+      return '<td id="wc-'+emp.id+'-'+wd.d+'" onclick="wsShowPopover(\''+mk+'\',\''+emp.id+'\','+wd.d+',this)" style="padding:6px 8px;border:1px solid var(--border);vertical-align:top;min-width:120px;cursor:pointer;transition:background 0.1s;'+manualOutline+'" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'">'+inner+'</td>';
+    }).join('');
+    return '<tr><td style="padding:8px 14px;border:1px solid var(--border);white-space:nowrap;position:sticky;right:0;background:var(--surface);z-index:1;border-right:2px solid var(--border)"><div style="font-weight:600;font-size:13px">'+emp.name+'</div><div style="font-size:11px;color:'+pctCol+';margin-top:2px">'+totalH+'h / '+availH+'h</div></td>'+cells+'</tr>';
+  }).join('');
+
+  return `
+  <div class="page-hd flex items-c just-b" style="margin-bottom:12px">
+    <div>
+      <div class="page-title">סידור שבועי</div>
+      <div class="page-sub">${ml} | ${emps.length} עובדים | ${weeks.length} שבועות</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-s btn-sm" onclick="clearWeeklySchedule('${mk}')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        נקה סידור
+      </button>
+      <button class="btn btn-s btn-sm" onclick="autoWeeklyDistribute('${mk}')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        פיזור אוטומטי
+      </button>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    <span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:4px">שבועות:</span>
+    ${tabs}
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:8px">לחץ על תא לעריכה • גבול כתום = עריכה ידנית</div>
+  <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)">
+    <table style="border-collapse:collapse;width:100%">
+      <thead><tr>
+        <th style="padding:8px 14px;text-align:right;background:var(--surface-2);border:1px solid var(--border);font-size:12px;position:sticky;right:0;z-index:2;white-space:nowrap;border-right:2px solid var(--border)">עובד</th>
+        ${colHeaders}
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ===================== SETTINGS PAGE =====================
+function renderSettings(){
+  const months=[...(state.activeMonths||[])].sort();
+
+  const monthRows=months.map(mk=>{
+    const ml=mkLabel(mk);
+    const empCount=state.employees.filter(e=>!e.hidden).length;
+    const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+    const contracted=activeClients.reduce((s,c)=>s+(c.monthlyHours?.[mk]||0),0);
+    const allocated=getTotalAllocated(mk);
+    const util=contracted>0?Math.round(allocated/contracted*100):0;
+    const utilColor=util>=85?'#3fb950':util>=60?'#d29922':'#f85149';
+    const isCurrent=mk===state.currentMonth;
+    const canDelete=months.length>1||!isCurrent;
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:10px 14px;text-align:center">
+        <input type="checkbox" class="export-month-cb" value="${mk}" style="accent-color:var(--primary);width:15px;height:15px;cursor:pointer">
+      </td>
+      <td style="padding:10px 14px">
+        <span style="font-weight:600;font-size:13px">${ml}</span>
+        ${isCurrent?'<span style="font-size:10px;background:var(--primary);color:#fff;padding:2px 7px;border-radius:10px;margin-right:7px;vertical-align:middle">נוכחי</span>':''}
+      </td>
+      <td style="padding:10px 14px;text-align:center;color:var(--muted);font-size:13px">${activeClients.length}</td>
+      <td style="padding:10px 14px;text-align:center;color:var(--muted);font-size:13px">${empCount}</td>
+      <td style="padding:10px 14px;text-align:center;font-size:13px">${contracted?contracted+'h':'—'}</td>
+      <td style="padding:10px 14px;text-align:center;font-size:13px">${allocated?allocated+'h':'—'}</td>
+      <td style="padding:10px 14px;text-align:center">
+        ${contracted>0
+          ?`<span style="font-weight:700;font-size:13px;color:${utilColor}">${util}%</span>`
+          :'<span style="color:var(--muted);font-size:12px">—</span>'}
+      </td>
+      <td style="padding:10px 14px;text-align:center">
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+          <button class="btn btn-s btn-sm" title="ייצוא חודש זה לאקסל" style="gap:5px" onclick="exportMonthsToExcel('${mk}')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M6 3v5M3.5 5.5 6 8l2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            XLS
+          </button>
+          <button class="btn btn-s btn-sm" style="color:#f85149;border-color:rgba(248,81,73,.3);gap:5px"
+            onclick="deleteMonth('${mk}')" ${canDelete?'':'disabled title="לא ניתן למחוק חודש יחיד"'}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1.5 3h9M4.5 3V1.5h3V3M10 3l-.6 7A1 1 0 0 1 8.4 11H3.6A1 1 0 0 1 2.6 10L2 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            מחק
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="page-hd">
+    <div class="page-title" style="display:flex;align-items:center;gap:9px">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 1.5v1.5M9 15v1.5M15 9h1.5M1.5 9H3M13.24 4.76l1.06-1.06M3.7 14.3l1.06-1.06M13.24 13.24l1.06 1.06M3.7 3.7l1.06 1.06" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      הגדרות
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:24px;max-width:920px">
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-weight:700;font-size:15px">ניהול חודשים</div>
+        <span style="font-size:12px;color:var(--muted);background:var(--surface-2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">${months.length} חודשים</span>
+      </div>
+      ${months.length?`
+      <div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--surface-2)">
+              <th style="padding:9px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">ייצוא</th>
+              <th style="padding:9px 14px;text-align:right;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">חודש</th>
+              <th style="padding:9px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">לקוחות</th>
+              <th style="padding:9px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">עובדים</th>
+              <th style="padding:9px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">שעות חוזיות</th>
+              <th style="padding:9px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">שעות מוקצות</th>
+              <th style="padding:9px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">ניצולת</th>
+              <th style="padding:9px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">פעולות</th>
+            </tr>
+          </thead>
+          <tbody>${monthRows}</tbody>
+        </table>
+      </div>`
+      :'<div style="text-align:center;padding:40px;color:var(--muted)">אין חודשים במערכת</div>'}
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5h6M5 8h6M5 10.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        ייצוא דוח לאקסל
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+        סמני חודשים בטבלה למעלה ולחצי ייצוא. הקובץ יכלול 4 גיליונות:<br>
+        <span style="color:var(--text)">סיכום חודשי · פירוט עובדים · פירוט לקוחות · מטריצת הקצאות</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-s btn-sm" onclick="document.querySelectorAll('.export-month-cb').forEach(cb=>cb.checked=true)">
+          בחר הכל
+        </button>
+        <button class="btn btn-s btn-sm" onclick="document.querySelectorAll('.export-month-cb').forEach(cb=>cb.checked=false)">
+          בטל הכל
+        </button>
+        <div style="width:1px;height:20px;background:var(--border)"></div>
+        <button class="btn btn-p" onclick="exportMonthsToExcel()" style="gap:7px">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M7 4v6M4.5 7.5 7 10l2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          ייצוא לאקסל
+        </button>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+function deleteMonth(mk){
+  const ml=mkLabel(mk);
+  if(!confirm('למחוק את חודש '+ml+'?\n\nכל הנתונים של החודש הזה — הקצאות, הגדרות וחופשות — יימחקו לצמיתות.'))return;
+  state.activeMonths=(state.activeMonths||[]).filter(m=>m!==mk);
+  delete (state.matrix||{})[mk];
+  if(state.monthSetup)delete state.monthSetup[mk];
+  if(state.vacations)delete state.vacations[mk];
+  state.employees.forEach(e=>{if(e.monthlyHours)delete e.monthlyHours[mk];});
+  state.clients.forEach(c=>{
+    if(c.monthlyHours)delete c.monthlyHours[mk];
+    if(c.billedHours)delete c.billedHours[mk];
+  });
+  if(state.currentMonth===mk){
+    const remaining=state.activeMonths;
+    state.currentMonth=remaining.length?remaining[remaining.length-1]:'';
+  }
+  saveState();
+  initMonthSelect();
+  navigate('settings');
+}
+
+function exportMonthsToExcel(forceMks){
+  if(typeof XLSX==='undefined'){alert('ספריית האקסל עדיין בטעינה, נסי שוב עוד רגע');return;}
+  let mks;
+  if(forceMks){
+    mks=Array.isArray(forceMks)?forceMks:[forceMks];
+  } else {
+    const cbs=document.querySelectorAll('.export-month-cb:checked');
+    mks=[...cbs].map(cb=>cb.value);
+    if(!mks.length){alert('יש לסמן לפחות חודש אחד לייצוא');return;}
+  }
+
+  const wb=XLSX.utils.book_new();
+  const typeHe={retainer:'ריטיינר',project:'פרויקט',internal:'פנימי'};
+
+  // ── Sheet 1: Monthly summary ──
+  const sum=[['חודש','לקוחות פעילים','עובדים פעילים','שעות חוזיות','שעות מוקצות','ניצולת %','ימי עבודה']];
+  mks.forEach(mk=>{
+    const ac=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+    const ae=state.employees.filter(e=>!e.hidden);
+    const contracted=ac.reduce((s,c)=>s+(c.monthlyHours?.[mk]||0),0);
+    const allocated=getTotalAllocated(mk);
+    const util=contracted>0?Math.round(allocated/contracted*100):0;
+    const wd=state.monthSetup?.[mk]?.workDays??calcMonthWorkDays(mk).effective;
+    sum.push([mkLabel(mk),ac.length,ae.length,contracted,allocated,contracted>0?util+'%':'—',wd]);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'סיכום חודשי');
+
+  // ── Sheet 2: Employees detail ──
+  const empRows=[['חודש','עובד','תפקיד','שעות קיבולת','שעות מוקצות','ניצולת %','ימי חופש','לקוחות פעילים']];
+  mks.forEach(mk=>{
+    state.employees.filter(e=>!e.hidden).forEach(e=>{
+      const cap=getEmpHours(e,mk);
+      const alloc=getEmpAllocated(e.id,mk);
+      const util=cap>0?Math.round(alloc/cap*100):0;
+      const vac=state.vacations?.[mk]?.[e.id]||0;
+      const clients=getEmpActiveClients(e.id,mk);
+      empRows.push([mkLabel(mk),e.name,e.role||'',cap,alloc,cap>0?util+'%':'—',vac,clients]);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(empRows),'פירוט עובדים');
+
+  // ── Sheet 3: Clients detail ──
+  const clientRows=[['חודש','לקוח','סוג','שעות חוזיות','שעות מוקצות','ניצולת %']];
+  mks.forEach(mk=>{
+    state.clients.filter(c=>c.active!==false).forEach(c=>{
+      const contracted=c.monthlyHours?.[mk]||0;
+      const allocated=Object.values(state.matrix[mk]||{}).reduce((s,ed)=>s+(parseFloat(ed[c.id])||0),0);
+      const util=contracted>0?Math.round(allocated/contracted*100):0;
+      clientRows.push([mkLabel(mk),c.name,typeHe[c.type]||c.type,contracted||'—',allocated||'—',contracted>0?util+'%':'—']);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(clientRows),'פירוט לקוחות');
+
+  // ── Sheet 4: Allocation matrix ──
+  const allocRows=[['חודש','עובד','לקוח','שעות מוקצות']];
+  mks.forEach(mk=>{
+    Object.entries(state.matrix[mk]||{}).forEach(([eid,cMap])=>{
+      const emp=state.employees.find(e=>e.id===eid);
+      if(!emp)return;
+      Object.entries(cMap).forEach(([cid,hrs])=>{
+        const h=parseFloat(hrs)||0;
+        if(!h)return;
+        const client=state.clients.find(c=>c.id===cid);
+        allocRows.push([mkLabel(mk),emp.name,client?.name||cid,h]);
+      });
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(allocRows),'מטריצת הקצאות');
+
+  // style column widths (RTL-friendly)
+  [sum,empRows,clientRows,allocRows].forEach((data,si)=>{
+    const ws=wb.Sheets[wb.SheetNames[si]];
+    if(!ws['!cols'])ws['!cols']=[];
+    const maxW=data[0].map((_,ci)=>Math.min(30,Math.max(...data.map(r=>String(r[ci]??'').length))+2));
+    ws['!cols']=maxW.map(w=>({wch:w}));
+  });
+
+  const fname=mks.length===1
+    ?'workforce-'+mks[0]+'.xlsx'
+    :'workforce-report-'+new Date().toISOString().slice(0,10)+'.xlsx';
+  XLSX.writeFile(wb,fname);
+}
+
+function init(){loadState();initMonthSelect();navigate('overview');}
+init();
+</script>
+</body>
+</html>
