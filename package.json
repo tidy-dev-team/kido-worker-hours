@@ -1,0 +1,27 @@
+{
+  "name": "kido-worker-hours",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tidy-dev-team/kido-worker-hours.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tidy-dev-team/kido-worker-hours/issues"
+  },
+  "homepage": "https://github.com/tidy-dev-team/kido-worker-hours#readme",
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "vite": "^8.0.3",
+    "xlsx": "^0.18.5"
+  }
+}
