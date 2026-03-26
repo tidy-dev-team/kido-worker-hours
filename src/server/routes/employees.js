@@ -29,10 +29,10 @@ async function employeesRoutes(fastify) {
 
   // POST /api/employees
   fastify.post('/api/employees', async (req, reply) => {
-    const { name, role = '', email = '', slackWebhook = '', scope = 100, visible = true, preferredClients = [] } = req.body || {};
+    const { id: empId, name, role = '', email = '', slackWebhook = '', scope = 100, visible = true, preferredClients = [] } = req.body || {};
     if (!name) return reply.code(400).send({ error: 'name required' });
 
-    const id = 'e' + nanoid(10);
+    const id = empId || 'e' + nanoid(10);
     db.prepare(`INSERT INTO employees (id, name, role, email, slack_webhook, scope, visible, preferred_clients)
                 VALUES (?,?,?,?,?,?,?,?)`)
       .run(id, name, role, email, slackWebhook, scope, visible ? 1 : 0, JSON.stringify(preferredClients));

@@ -1,5 +1,6 @@
 import { MONTHS } from '../constants.js';
 import { state, saveState } from '../state.js';
+import { api } from '../api.js';
 import { getClientHours, getTotalBilled, getRemainingBankBefore } from '../working-days.js';
 import { getClientAllocated } from '../aggregations.js';
 import { clientTypeBadge, clientTypeLabel, closeModal } from '../utils.js';
@@ -82,19 +83,24 @@ export function updateClientHours(cid,mk,v){
   if(!c)return;
   if(!c.monthlyHours)c.monthlyHours={};
   c.monthlyHours[mk]=parseFloat(v)||0;
-  saveState();
+  api.put(`/api/clients/${cid}/hours/${mk}`,{hours:c.monthlyHours[mk]});
 }
 
 export function deleteClient(id){
   if(!confirm('למחוק לקוח זה? כל ההקצאות שלו ימחקו.'))return;
   state.clients=state.clients.filter(c=>c.id!==id);
   Object.keys(state.matrix).forEach(mk=>Object.keys(state.matrix[mk]).forEach(eid=>{delete state.matrix[mk][eid][id];}));
-  saveState();renderPage();
+  api.delete(`/api/clients/${id}`);
+  renderPage();
 }
 
 export function toggleClientActive(cid){
   const c=state.clients.find(x=>x.id===cid);
-  if(c){c.active=c.active===false?true:false;saveState();renderPage();}
+  if(c){
+    c.active=c.active===false?true:false;
+    api.put(`/api/clients/${cid}`,{name:c.name,type:c.type,active:c.active,hoursBank:c.hoursBank,weeklyDay:c.weeklyDay});
+    renderPage();
+  }
 }
 
 export function openClientModal(cid=null){
@@ -225,10 +231,24 @@ export function saveClient(cid){
   // Sync preferredClients on employees
   state.employees.forEach(e=>{
     const prefs=e.preferredClients||[];
-    if(assignedEmpIds.has(e.id)&&!prefs.includes(clientId)){prefs.push(clientId);e.preferredClients=prefs;}
-    else if(!assignedEmpIds.has(e.id)&&prefs.includes(clientId)){e.preferredClients=prefs.filter(x=>x!==clientId);}
+    const before=prefs.includes(clientId);
+    if(assignedEmpIds.has(e.id)&&!before){prefs.push(clientId);e.preferredClients=prefs;api.put(`/api/employees/${e.id}`,{name:e.name,role:e.role,email:e.email,slackWebhook:e.slackWebhook,scope:e.scope,visible:e.visible,preferredClients:prefs});}
+    else if(!assignedEmpIds.has(e.id)&&before){e.preferredClients=prefs.filter(x=>x!==clientId);api.put(`/api/employees/${e.id}`,{name:e.name,role:e.role,email:e.email,slackWebhook:e.slackWebhook,scope:e.scope,visible:e.visible,preferredClients:e.preferredClients});}
   });
-  saveState();
+
+  // Persist client to server
+  const c=state.clients.find(x=>x.id===clientId);
+  if(c){
+    const payload={name:c.name,type:c.type,active:c.active!==false,hoursBank:c.hoursBank??null,weeklyDay:c.weeklyDay??null};
+    if(cid){
+      api.put(`/api/clients/${clientId}`,payload);
+    } else {
+      api.post('/api/clients',{id:clientId,...payload});
+    }
+    // Persist monthly hours
+    Object.entries(c.monthlyHours||{}).forEach(([mk,h])=>api.put(`/api/clients/${clientId}/hours/${mk}`,{hours:h}));
+    if(c.type==='project')Object.entries(c.billedHours||{}).forEach(([mk,h])=>api.put(`/api/clients/${clientId}/billed/${mk}`,{hours:h}));
+  }
   if(_empEditReturnId!==null){
     const returnId=_empEditReturnId;
     setEmpEditReturnId(null);

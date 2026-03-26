@@ -30,10 +30,10 @@ async function clientsRoutes(fastify) {
 
   // POST /api/clients
   fastify.post('/api/clients', async (req, reply) => {
-    const { name, type, active = true, hoursBank, weeklyDay } = req.body || {};
+    const { id: clientId, name, type, active = true, hoursBank, weeklyDay } = req.body || {};
     if (!name || !type) return reply.code(400).send({ error: 'name and type required' });
 
-    const id = 'c' + nanoid(10);
+    const id = clientId || 'c' + nanoid(10);
     db.prepare(`INSERT INTO clients (id, name, type, active, hours_bank, weekly_day)
                 VALUES (?, ?, ?, ?, ?, ?)`)
       .run(id, name, type, active ? 1 : 0, hoursBank ?? null, weeklyDay ? JSON.stringify(weeklyDay) : null);

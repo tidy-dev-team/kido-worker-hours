@@ -1,4 +1,5 @@
-import { state, saveState } from '../state.js';
+import { state } from '../state.js';
+import { api } from '../api.js';
 import { getClientHours, getEmpHours } from '../working-days.js';
 import { getEmpAllocated } from '../aggregations.js';
 import { mkLabel } from '../utils.js';
@@ -72,7 +73,7 @@ export function autoDistribute(mk){
 
   // אין שלב 2 — שעות שנשארו לעובד נשארות ריקות לעדכון ידני
 
-  saveState();
+  api.put(`/api/matrix/${mk}`,state.matrix[mk]);
   renderPage();
 
   const totalAssigned=visEmps.reduce((s,e)=>s+getEmpAllocated(e.id,mk),0);

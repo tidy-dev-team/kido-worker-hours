@@ -1,5 +1,6 @@
 import { MONTHS, MONTH_NAMES_HE } from '../constants.js';
 import { state, saveState } from '../state.js';
+import { api } from '../api.js';
 import { getWorkingDays, getEmpHours, calcAutoHours, calcMonthWorkDays, calcAutoHoursForEmp } from '../working-days.js';
 import { getEmpAllocated, getEmpActiveClients } from '../aggregations.js';
 import { clientTypeBadge, clientTypeLabel, closeModal, mkLabel, mkKey, initMonthSelect } from '../utils.js';
@@ -145,18 +146,23 @@ export function renderEmployees(){
 
 export function toggleEmpVisibility(eid){
   const e=state.employees.find(x=>x.id===eid);
-  if(e){e.visible=e.visible===false?true:false;saveState();renderPage();}
+  if(e){
+    e.visible=e.visible===false?true:false;
+    e.hidden=!e.visible;
+    api.put(`/api/employees/${eid}`,{name:e.name,role:e.role,email:e.email,slackWebhook:e.slackWebhook,scope:e.scope,visible:e.visible,preferredClients:e.preferredClients||[]});
+    renderPage();
+  }
 }
 export function toggleAllEmployees(show){
-  state.employees.forEach(e=>e.visible=show);
-  saveState();renderPage();
+  state.employees.forEach(e=>{e.visible=show;e.hidden=!show;api.put(`/api/employees/${e.id}`,{name:e.name,role:e.role,email:e.email,slackWebhook:e.slackWebhook,scope:e.scope,visible:show,preferredClients:e.preferredClients||[]});});
+  renderPage();
 }
 export function updateEmpHours(eid,mk,v){
   const e=state.employees.find(x=>x.id===eid);
   if(!e)return;
   if(!e.monthlyHours)e.monthlyHours={};
   e.monthlyHours[mk]=parseFloat(v)||0;
-  saveState();
+  api.put(`/api/employees/${eid}/hours/${mk}`,{hours:e.monthlyHours[mk]});
 }
 export function updateEmpVacDays(eid,mk,v){
   if(!state.vacations)state.vacations={};
@@ -164,17 +170,23 @@ export function updateEmpVacDays(eid,mk,v){
   const days=parseFloat(v)||0;
   if(days>0)state.vacations[mk][eid]=days;
   else delete state.vacations[mk][eid];
-  saveState();renderPage();
+  api.put(`/api/vacations/${mk}/${eid}`,{days});
+  renderPage();
 }
 export function resetEmpHours(eid,mk){
   const e=state.employees.find(x=>x.id===eid);
-  if(e&&e.monthlyHours){delete e.monthlyHours[mk];saveState();renderPage();}
+  if(e&&e.monthlyHours){
+    delete e.monthlyHours[mk];
+    api.put(`/api/employees/${eid}/hours/${mk}`,{hours:0});
+    renderPage();
+  }
 }
 export function deleteEmployee(id){
   if(!confirm('למחוק עובד זה?'))return;
   state.employees=state.employees.filter(e=>e.id!==id);
   Object.keys(state.matrix).forEach(mk=>{delete state.matrix[mk][id];});
-  saveState();renderPage();
+  api.delete(`/api/employees/${id}`);
+  renderPage();
 }
 
 export function buildAllocationMsg(e,m){
@@ -407,9 +419,17 @@ export function saveEmployee(eid){
   const prefClients=[...document.querySelectorAll('[data-pref]:checked')].map(i=>i.dataset.pref);
   const email=document.getElementById('e-email').value.trim();
   const slackWebhook=document.getElementById('e-slack').value.trim();
-  if(eid){const e=state.employees.find(x=>x.id===eid);if(e){e.name=name;e.role=role;e.scope=scope;e.preferredClients=prefClients;e.email=email;e.slackWebhook=slackWebhook;}}
-  else{state.employees.push({id:'e'+Date.now(),name,role,scope,visible:true,monthlyHours:{},preferredClients:prefClients,email,slackWebhook});state.employees.sort((a,b)=>a.name.localeCompare(b.name,'he'));}
-  saveState();closeModal();renderPage();
+  if(eid){
+    const e=state.employees.find(x=>x.id===eid);
+    if(e){e.name=name;e.role=role;e.scope=scope;e.preferredClients=prefClients;e.email=email;e.slackWebhook=slackWebhook;}
+    api.put(`/api/employees/${eid}`,{name,role,email,slackWebhook,scope,visible:true,preferredClients:prefClients});
+  } else {
+    const newId='e'+Date.now();
+    state.employees.push({id:newId,name,role,scope,visible:true,hidden:false,monthlyHours:{},preferredClients:prefClients,email,slackWebhook});
+    state.employees.sort((a,b)=>a.name.localeCompare(b.name,'he'));
+    api.post('/api/employees',{id:newId,name,role,email,slackWebhook,scope,visible:true,preferredClients:prefClients});
+  }
+  closeModal();renderPage();
 }
 
 export function openClientModalFromEmp(eid){
@@ -708,19 +728,24 @@ export function toggleNcFields(idx,type){
   if(hrs)hrs.style.display=type==='internal'?'none':'';
 }
 
-export function saveMonthSetup(mk){
+export async function saveMonthSetup(mk){
   if(!state.monthSetup)state.monthSetup={};
   if(!state.vacations)state.vacations={};
   const days=parseFloat(document.getElementById('ms-days').value);
   if(!isNaN(days))state.monthSetup[mk]={workDays:days};
   if(!state.vacations[mk])state.vacations[mk]={};
+
+  const vacOps=[];
   document.querySelectorAll('[data-vaceid]').forEach(inp=>{
     const eid=inp.dataset.vaceid;
     if(!eid)return;
     const v=parseFloat(inp.value)||0;
     if(v>0)state.vacations[mk][eid]=v;
     else delete state.vacations[mk][eid];
+    vacOps.push(api.put(`/api/vacations/${mk}/${eid}`,{days:v}));
   });
+
+  const newClientOps=[];
   document.querySelectorAll('[data-nc-card]').forEach(card=>{
     const idx=card.dataset.ncCard;
     const nameEl=document.getElementById(`nc-name-${idx}`);
@@ -736,20 +761,39 @@ export function saveMonthSetup(mk){
     if(type==='project'&&bank)nc.hoursBank=bank;
     state.clients.push(nc);
     const clientId=nc.id;
+    const updatedEmps=[];
     state.employees.forEach(e=>{
       const cb=card.querySelector(`[data-nc-emp-${idx}="${e.id}"]`);
       if(cb?.checked){
         if(!e.preferredClients)e.preferredClients=[];
         if(!e.preferredClients.includes(clientId))e.preferredClients.push(clientId);
+        updatedEmps.push(e);
       }
     });
+    newClientOps.push(
+      api.post('/api/clients',{id:clientId,name,type,active:true,hoursBank:nc.hoursBank??null,weeklyDay:null}),
+      hours>0?api.put(`/api/clients/${clientId}/hours/${mk}`,{hours}):null,
+      ...updatedEmps.map(e=>api.put(`/api/employees/${e.id}`,{name:e.name,role:e.role,email:e.email,slackWebhook:e.slackWebhook,scope:e.scope,visible:e.visible,preferredClients:e.preferredClients})),
+    );
   });
   state.clients.sort((a,b)=>a.name.localeCompare(b.name,'he'));
+
   if(!state.activeMonths)state.activeMonths=[];
-  if(!state.activeMonths.includes(mk)){
+  const isNew=!state.activeMonths.includes(mk);
+  if(isNew){
     state.activeMonths.push(mk);
     state.activeMonths.sort();
+    state.matrix[mk]={};
+    state.vacations[mk]=state.vacations[mk]||{};
+    state.weeklySchedule[mk]={};
   }
   state.currentMonth=mk;
-  saveState();initMonthSelect();closeModal();renderPage();
+
+  await Promise.all([
+    api.put(`/api/months/${mk}`,{workDays:isNaN(days)?null:days,holidays:[]}),
+    ...vacOps,
+    ...newClientOps.filter(Boolean),
+  ]);
+
+  initMonthSelect();closeModal();renderPage();
 }

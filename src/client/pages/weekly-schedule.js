@@ -1,4 +1,5 @@
-import { state, saveState } from '../state.js';
+import { state } from '../state.js';
+import { api } from '../api.js';
 import { getEmpHours } from '../working-days.js';
 import { mkLabel } from '../utils.js';
 import { _weeklyWeekIdx, setWeeklyWeekIdx, renderPage } from '../router.js';
@@ -60,7 +61,8 @@ export function clearWeeklySchedule(mk){
     state.weeklySchedule[mk][emp.id]={};
     allWorkDays.forEach(function(wd){state.weeklySchedule[mk][emp.id][wd.d]=[];});
   });
-  saveState();renderPage();
+  api.delete(`/api/weekly/${mk}`);
+  renderPage();
 }
 
 export function autoWeeklyDistribute(mk){
@@ -80,7 +82,8 @@ export function autoWeeklyDistribute(mk){
       if(assignments.length)state.weeklySchedule[mk][emp.id][d]=assignments.map(x=>x.cid);
     });
   });
-  saveState();renderPage();
+  api.put(`/api/weekly/${mk}`,state.weeklySchedule[mk]||{});
+  renderPage();
 }
 
 export function wsShowPopover(mk,eid,day,cellEl){
@@ -100,7 +103,7 @@ export function wsShowPopover(mk,eid,day,cellEl){
     const am=buildAutoMapMulti(allocs,aw);
     state.weeklySchedule[mk][eid]={};
     Object.entries(am).forEach(function(e){if(e[1].length)state.weeklySchedule[mk][eid][e[0]]=e[1].map(function(x){return x.cid;});});
-    saveState();
+    api.put(`/api/weekly/${mk}`,state.weeklySchedule[mk]);
   }
   const current=new Set(normWS(state.weeklySchedule[mk][eid][day]));
   const div=document.createElement('div');
@@ -130,7 +133,7 @@ export function wsToggleClient(mk,eid,day,cid,checked){
   const newCids=checked?[...current.filter(function(c){return c!==cid;}),cid]:current.filter(function(c){return c!==cid;});
   if(!newCids.length)delete state.weeklySchedule[mk][eid][day];
   else state.weeklySchedule[mk][eid][day]=newCids;
-  saveState();
+  api.patch(`/api/weekly/${mk}/${eid}/${day}`,{clientIds:newCids});
   wsUpdateCellDisplay(mk,eid,day);
 }
 function wsUpdateCellDisplay(mk,eid,day){

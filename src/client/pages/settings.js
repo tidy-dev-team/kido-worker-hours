@@ -1,4 +1,5 @@
-import { state, saveState } from '../state.js';
+import { state } from '../state.js';
+import { api } from '../api.js';
 import { mkLabel, initMonthSelect } from '../utils.js';
 import { calcMonthWorkDays, getEmpHours } from '../working-days.js';
 import { getTotalAllocated, getEmpAllocated, getEmpActiveClients } from '../aggregations.js';
@@ -119,10 +120,21 @@ export function renderSettings(){
       </div>
     </div>
 
+    <div class="card">
+      <div style="font-weight:700;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M13 13l-2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        חשבון
+      </div>
+      <button class="btn btn-s btn-sm" style="color:#f85149;border-color:rgba(248,81,73,.3);gap:6px" onclick="logout()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M5 11H2.5A1.5 1.5 0 0 1 1 9.5v-6A1.5 1.5 0 0 1 2.5 2H5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8.5 9.5 12 6.5 8.5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6.5H5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        יציאה מהמערכת
+      </button>
+    </div>
+
   </div>`;
 }
 
-export function deleteMonth(mk){
+export async function deleteMonth(mk){
   const ml=mkLabel(mk);
   if(!confirm('למחוק את חודש '+ml+'?\n\nכל הנתונים של החודש הזה — הקצאות, הגדרות וחופשות — יימחקו לצמיתות.'))return;
   state.activeMonths=(state.activeMonths||[]).filter(m=>m!==mk);
@@ -138,7 +150,7 @@ export function deleteMonth(mk){
     const remaining=state.activeMonths;
     state.currentMonth=remaining.length?remaining[remaining.length-1]:'';
   }
-  saveState();
+  await api.delete(`/api/months/${mk}`);
   initMonthSelect();
   navigate('settings');
 }

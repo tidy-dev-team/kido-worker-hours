@@ -1,5 +1,6 @@
 import { MONTHS } from '../constants.js';
 import { state, saveState } from '../state.js';
+import { api } from '../api.js';
 import { getClientHours, getEmpHours } from '../working-days.js';
 import { getTotalAllocated, getClientAllocated, getEmpAllocated, getEmpActiveClients } from '../aggregations.js';
 import { mkLabel, clientTypeBadge, clientTypeLabel } from '../utils.js';
@@ -260,7 +261,7 @@ export function onMatrixChange(inp,mk){
     inp.value='';delete ed[cid];inp.style.background='';return;
   }
   if(val===0)delete ed[cid];else ed[cid]=val;
-  saveState();
+  api.patch(`/api/matrix/${mk}/${eid}/${cid}`,{hours:val});
   // Update column footer
   document.querySelectorAll('.mx-c-tot td:not(.mx-td-emp)').forEach((td,i)=>{
     const vc=state.clients.filter(c=>c.active!==false&&(_showAll||getClientHours(c,mk)>0||Object.values(state.matrix[mk]||{}).some(ed=>(parseFloat(ed[c.id])||0)>0)));
@@ -274,10 +275,12 @@ export function onMatrixChange(inp,mk){
 export function copyAllocations(fromMk,toMk){
   if(!state.matrix[fromMk]){alert('אין נתונים בחודש הנבחר');return;}
   state.matrix[toMk]=JSON.parse(JSON.stringify(state.matrix[fromMk]));
-  saveState();renderPage();
+  api.put(`/api/matrix/${toMk}`,state.matrix[toMk]);
+  renderPage();
 }
 
 export function resetMonth(mk){
   state.matrix[mk]={};
-  saveState();renderPage();
+  api.put(`/api/matrix/${mk}`,{});
+  renderPage();
 }
