@@ -196,7 +196,7 @@ export function renderWeeklySchedule(){
   const tabs=weeks.map(function(w,i){
     const first=w[0],last=w[w.length-1];
     const active=i===weekIdx;
-    return '<button class="btn btn-sm '+(active?'btn-p':'btn-s')+'" onclick="_weeklyWeekIdx='+i+';renderPage()" style="'+(active?'':'opacity:0.7')+'">שבוע '+(i+1)+' <span style="font-size:10px;opacity:0.8">('+first.d+'/'+mo+'–'+last.d+'/'+mo+')</span></button>';
+    return '<button class="btn btn-sm '+(active?'btn-p':'btn-s')+'" onclick="setWeeklyWeekIdx('+i+');renderPage()" style="'+(active?'':'opacity:0.7')+'">שבוע '+(i+1)+' <span style="font-size:10px;opacity:0.8">('+first.d+'/'+mo+'–'+last.d+'/'+mo+')</span></button>';
   }).join('');
 
   const colHeaders=week.map(function(wd){
