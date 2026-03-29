@@ -22,31 +22,36 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '4000');
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-in-production-min-32-chars!!';
 
-// SQLite-backed session store (Promise-based for @fastify/session v11+)
+// SQLite-backed session store (callback-based for @fastify/session)
 class SQLiteStore {
-  get(sid) {
+  get(sid, cb) {
     const row = db.prepare('SELECT data, expires_at FROM sessions WHERE sid = ?').get(sid);
-    if (!row) return null;
+    if (!row) return cb(null, null);
     if (new Date(row.expires_at) < new Date()) {
       db.prepare('DELETE FROM sessions WHERE sid = ?').run(sid);
-      return null;
+      return cb(null, null);
     }
-    try { return JSON.parse(row.data); } catch { return null; }
+    try { cb(null, JSON.parse(row.data)); } catch { cb(null, null); }
   }
-  set(sid, session) {
+  set(sid, session, cb) {
     const expires = session.cookie?.expires
       ? new Date(session.cookie.expires).toISOString()
       : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     db.prepare(`INSERT INTO sessions (sid, data, expires_at) VALUES (?,?,?)
                 ON CONFLICT(sid) DO UPDATE SET data=excluded.data, expires_at=excluded.expires_at`)
       .run(sid, JSON.stringify(session), expires);
+    cb(null);
   }
-  destroy(sid) {
+  destroy(sid, cb) {
     db.prepare('DELETE FROM sessions WHERE sid = ?').run(sid);
+    cb(null);
   }
 }
 
-const fastify = Fastify({ logger: { level: process.env.LOG_LEVEL || 'info' } });
+const fastify = Fastify({
+  logger: { level: process.env.LOG_LEVEL || 'info' },
+  trustProxy: true,
+});
 
 await fastify.register(fastifyCookie);
 await fastify.register(fastifySession, {
