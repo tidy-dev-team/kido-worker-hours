@@ -3,7 +3,7 @@ import './style.css';
 
 import { api } from './api.js';
 import { loadState } from './state.js';
-import { navigate, onMonthChange, setRenderers } from './router.js';
+import { navigate, onMonthChange, setRenderers, renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView } from './router.js';
 import { initMonthSelect, closeModal, mkKey } from './utils.js';
 
 import { renderOverview, initCharts } from './pages/overview.js';
@@ -33,6 +33,7 @@ Object.assign(window, {
   onMatrixInput, onMatrixChange, copyAllocations, resetMonth, autoDistribute,
   clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient,
   deleteMonth, exportMonthsToExcel,
+  renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView,
   logout,
 });
 

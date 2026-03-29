@@ -51,7 +51,7 @@ export function renderMatrix(){
       </td>`;
     }).join('');
     return `<tr style="${dimRow?'opacity:0.25;transition:opacity .15s':'transition:opacity .15s'}${isFocused?';background:#f0f4ff':''}">
-      <td class="mx-td-emp" style="cursor:pointer${isFocused?';background:#e8eeff':''}" onclick="_matrixFocusEmp=_matrixFocusEmp==='${e.id}'?null:'${e.id}';renderPage()" title="${isFocused?'לחץ לביטול הסינון':'לחץ להדגשת עובד'}">
+      <td class="mx-td-emp" style="cursor:pointer${isFocused?';background:#e8eeff':''}" onclick="setMatrixFocusEmp(${isFocused?'null':`'${e.id}'`});renderPage()" title="${isFocused?'לחץ לביטול הסינון':'לחץ להדגשת עובד'}">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
           <span>${isFocused?'<span style="color:var(--primary);margin-left:3px">◉</span>':''}<span>${e.name}</span>${(e.preferredClients||[]).length>0?'<span style="font-size:9px;color:var(--primary);margin-right:3px">★</span>':''}</span>
           <span id="et-${e.id}" class="mx-emp-tot${isOver?' over':''}">${alloc}/${avail}h${isOver?' ⚠':''}</span>
@@ -136,13 +136,13 @@ export function renderMatrix(){
       <div style="width:1px;background:var(--border);align-self:stretch;min-height:32px"></div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">תצוגה</span>
-        <button class="btn btn-s btn-sm" onclick="_matrixView=_matrixView==='table'?'cards':'table';renderPage()">${_matrixView!=='table'?'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="9.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> טבלה':'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> כרטיסיות'}</button>
+        <button class="btn btn-s btn-sm" onclick="setMatrixView('${_matrixView==='table'?'cards':'table'}');renderPage()">${_matrixView!=='table'?'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="9.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> טבלה':'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> כרטיסיות'}</button>
       </div>
     </div>`;
   })()}
   ${_matrixView!=='table'?`<div style="display:flex;gap:6px;margin-bottom:14px">
-    <button class="btn btn-sm" style="min-width:110px;${_matrixView==='cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="_matrixView='cards';renderPage()">👤 לפי עובד</button>
-    <button class="btn btn-sm" style="min-width:110px;${_matrixView==='client-cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="_matrixView='client-cards';renderPage()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 12V6l5-3.5 5 3.5v6" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><rect x="4.5" y="7.5" width="2" height="4.5" rx="0.4" fill="currentColor"/></svg> לפי לקוח</button>
+    <button class="btn btn-sm" style="min-width:110px;${_matrixView==='cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="setMatrixView('cards');renderPage()">👤 לפי עובד</button>
+    <button class="btn btn-sm" style="min-width:110px;${_matrixView==='client-cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="setMatrixView('client-cards');renderPage()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 12V6l5-3.5 5 3.5v6" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><rect x="4.5" y="7.5" width="2" height="4.5" rx="0.4" fill="currentColor"/></svg> לפי לקוח</button>
   </div>`:''}
   <div class="mx-layout">
     <div class="mx-wrap">

@@ -65,7 +65,7 @@ export function renderClients(){
   <div class="page-hd flex items-c just-b">
     <div><div class="page-title">לקוחות</div><div class="page-sub">${activeCount} פעילים מתוך ${state.clients.length} | ${retC} ריטיינר | ${projC} פרויקט${intC?` | ${intC} פנימי`:''} | ${totalH} שעות ב${ml}</div></div>
     <div class="flex gap2">
-      <button class="btn btn-s btn-sm" onclick="_clientShowInactive=!_clientShowInactive;renderPage()">${_clientShowInactive?'הסתר לא פעילים':'הצג לא פעילים'}</button>
+      <button class="btn btn-s btn-sm" onclick="setClientShowInactive(${!_clientShowInactive});renderPage()">${_clientShowInactive?'הסתר לא פעילים':'הצג לא פעילים'}</button>
       <button class="btn btn-p" onclick="openClientModal()">+ הוסף לקוח</button>
     </div>
   </div>
