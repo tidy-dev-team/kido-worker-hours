@@ -67,7 +67,7 @@ export function renderSettings(){
   </div>
   <div style="display:flex;flex-direction:column;gap:24px;max-width:920px">
 
-    <div class="card" id="settings-months-card">
+    <div class="card" id="settings-months-card" style="padding:20px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="font-weight:700;font-size:15px">ניהול חודשים</div>
         <span style="font-size:12px;color:var(--muted);background:var(--surface-2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">${months.length} חודשים</span>
@@ -93,7 +93,7 @@ export function renderSettings(){
       :'<div style="text-align:center;padding:40px;color:var(--muted)">אין חודשים במערכת</div>'}
     </div>
 
-    <div class="card" id="settings-export-card">
+    <div class="card" id="settings-export-card" style="padding:20px">
       <div style="font-weight:700;font-size:15px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5h6M5 8h6M5 10.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         ייצוא דוח לאקסל
@@ -117,10 +117,17 @@ export function renderSettings(){
           </svg>
           ייצוא לאקסל
         </button>
+        <button class="btn btn-s" id="btn-export-json" onclick="exportToJSON()" style="gap:7px;border-color:var(--border)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M7 4v6M4.5 7.5 7 10l2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          גיבוי JSON
+        </button>
       </div>
     </div>
 
-    <div class="card" id="settings-account-card">
+    <div class="card" id="settings-account-card" style="padding:20px">
       <div style="font-weight:700;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M13 13l-2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         חשבון
@@ -132,6 +139,17 @@ export function renderSettings(){
     </div>
 
   </div>`;
+}
+
+export async function exportToJSON(){
+  const data = await api.get('/api/export');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'workhours-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function deleteMonth(mk){
