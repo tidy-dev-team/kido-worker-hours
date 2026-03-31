@@ -17,6 +17,7 @@ import vacationsRoutes from './routes/vacations.js';
 import matrixRoutes from './routes/matrix.js';
 import weeklyRoutes from './routes/weekly.js';
 import usersRoutes from './routes/users.js';
+import exportRoutes from './routes/export.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '4000');
@@ -81,6 +82,7 @@ await fastify.register(vacationsRoutes);
 await fastify.register(matrixRoutes);
 await fastify.register(weeklyRoutes);
 await fastify.register(usersRoutes);
+await fastify.register(exportRoutes);
 
 // SPA fallback — serve index.html for non-API routes (production only)
 if (existsSync(distDir)) {

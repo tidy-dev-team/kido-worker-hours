@@ -12,7 +12,7 @@ import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHour
 import { renderMatrix, onMatrixInput, onMatrixChange, copyAllocations, resetMonth } from './pages/matrix.js';
 import { autoDistribute } from './pages/auto-distribute.js';
 import { renderWeeklySchedule, clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient } from './pages/weekly-schedule.js';
-import { renderSettings, deleteMonth, exportMonthsToExcel } from './pages/settings.js';
+import { renderSettings, deleteMonth, exportMonthsToExcel, exportToJSON } from './pages/settings.js';
 
 // Register renderers (breaks circular dep: router can't import pages)
 setRenderers({ renderOverview, initCharts, renderClients, renderEmployees, renderMatrix, renderWeeklySchedule, renderSettings });
@@ -32,7 +32,7 @@ Object.assign(window, {
   toggleNcFields, saveMonthSetup,
   onMatrixInput, onMatrixChange, copyAllocations, resetMonth, autoDistribute,
   clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient,
-  deleteMonth, exportMonthsToExcel,
+  deleteMonth, exportMonthsToExcel, exportToJSON,
   renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView,
   logout,
 });

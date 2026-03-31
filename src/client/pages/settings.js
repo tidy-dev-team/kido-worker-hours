@@ -117,6 +117,13 @@ export function renderSettings(){
           </svg>
           ייצוא לאקסל
         </button>
+        <button class="btn btn-s" id="btn-export-json" onclick="exportToJSON()" style="gap:7px;border-color:var(--border)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+            <path d="M7 4v6M4.5 7.5 7 10l2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          גיבוי JSON
+        </button>
       </div>
     </div>
 
@@ -132,6 +139,17 @@ export function renderSettings(){
     </div>
 
   </div>`;
+}
+
+export async function exportToJSON(){
+  const data = await api.get('/api/export');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'workhours-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function deleteMonth(mk){
