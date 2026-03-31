@@ -27,16 +27,19 @@ node scripts/migrate-localstorage.js data-export.json
 ## Deployment & CI/CD
 
 ```
-main (legacy)
-production  ← PR + 1 dev approval → auto-deploys to hours.tidyframework.com
+main (legacy, not used)
+production  ← PR + 1 dev approval → auto-deploys to hours.tidyframework.com  [DEFAULT BRANCH]
 staging     ← PR, no approval needed → auto-deploys to staging.hours.tidyframework.com
 feature/*   ← anyone pushes freely
 ```
 
 - **GitHub Actions** (`.github/workflows/deploy.yml`) SSHs into the DO droplet and runs `deploy.sh`
-- **Production**: PM2 process `kido-hours` on port 4000
-- **Staging**: PM2 process `kido-staging` on port 4001, separate `data.db`
+- **Production**: PM2 process `kido-hours` on port 4000, path `~/kido-worker-hours/`
+- **Staging**: PM2 process `kido-staging` on port 4001, path `~/kido-worker-hours-staging/`, separate `data.db`
 - **To deploy**: push to a branch → PR to `staging` → merge → test → PR to `production` → get approval → merge
+- **Default GitHub branch**: `production` (PRs default to targeting `production`)
+
+**SQLite WAL files on server:** SQLite WAL mode creates `data.db-shm` and `data.db-wal` sidecar files when the process runs. These are excluded in `.gitignore` but exist on the server as untracked files. Both `deploy.sh` scripts include `rm -f data.db-shm data.db-wal` before `git pull` to prevent git merge conflicts.
 
 ## Architecture
 
@@ -192,3 +195,53 @@ Copy `.env.example` to `.env`:
 - No framework — all rendering is `innerHTML` with template literals.
 - Event handlers use inline `onclick="fn()"` — functions must be on `window.*`.
 - CSS is in `src/client/style.css` — CSS custom properties in `:root` for theming.
+
+## Semantic IDs & Classes (for targeting UI elements)
+
+All pages have been annotated with semantic IDs and classes. Use these when making targeted changes.
+
+### Login (`main.js`)
+`#login-page`, `#login-card`, `#login-logo`, `#login-form`, `#login-error`, `#btn-login`
+
+### Sidebar (`index.html`)
+`#btn-new-month`
+
+### Overview (`pages/overview.js`)
+- Container: `#overview-page`, `#overview-alerts`, `#overview-kpis`, `#overview-charts`, `#overview-client-status`, `#overview-client-tbl`, `#overview-biz-insights`
+- KPI cards: `#kpi-client-hours`, `#kpi-emp-capacity`, `#kpi-utilization`, `#kpi-capacity-gap`, `#kpi-work-days`, `#kpi-vacation-days`
+- Chart cards: `#chart-card-alloc`, `#chart-card-type`, `#chart-card-trend`
+- Insight sections: `#ins-emp-util`, `#ins-client-cov`, `#ins-holidays`, `#ins-vacations`, `#ins-project-bank`, `#ins-trend`
+- Dynamic attributes: `data-emp-id`, `data-client-id`, `data-date` on rows
+
+### Clients (`pages/clients.js`)
+- Container: `#clients-page`, `#clients-card`, `#clients-tbl`
+- Buttons: `#btn-toggle-inactive`, `#btn-add-client`, `#btn-save-client`
+- Modal: `#modal-client`, `#client-emp-pref-grid`
+- Rows: `.client-row[data-client-id]`
+- Cell classes: `.client-name-cell`, `.client-type-cell`, `.client-hours-cell`, `.client-bank-cell`, `.client-alloc-cell`, `.client-util-cell`, `.client-actions-cell`
+- Button classes: `.btn-edit-client`, `.btn-delete-client`, `.btn-cancel`
+
+### Employees (`pages/employees.js`)
+- Container: `#employees-page`, `#emp-list-card`, `#emp-tbl`
+- Buttons: `#btn-show-all-emps`, `#btn-hide-all-emps`, `#btn-send-all-alloc`, `#btn-add-emp`, `#btn-save-emp`, `#btn-send-all-email`, `#btn-send-all-slack`
+- Modals: `#modal-employee`, `#modal-send-alloc`, `#modal-send-all`, `#modal-month-setup`
+- Month setup sections: `#ms-month-picker`, `#ms-calendar`, `#ms-workdays`, `#ms-vacations`, `#ms-new-clients`
+- Month setup buttons: `#btn-add-vac`, `#btn-add-nc`, `#btn-save-month`
+- Rows: `.emp-row[data-emp-id]`; cards: `.emp-card[data-emp-id]`
+- Cell classes: `.emp-name-cell`, `.emp-role-cell`, `.emp-hours-cell`, `.emp-vac-cell`, `.emp-actions-cell`
+- Button classes: `.btn-edit-emp`, `.btn-delete-emp`, `.btn-send-alloc`, `.btn-reset-hours`
+
+### Matrix (`pages/matrix.js`)
+- Container: `#matrix-page`, `#matrix-legend`, `#matrix-kpis`, `#matrix-toolbar`, `#matrix-layout`, `#matrix-wrap`, `#matrix-tbl`, `#matrix-tbody`, `#matrix-col-totals`
+- Controls: `#btn-auto-distribute`, `#matrix-client-count`, `#matrix-sub`
+
+### Weekly Schedule (`pages/weekly-schedule.js`)
+- Container: `#weekly-page`, `#weekly-title`, `#weekly-sub`, `#weekly-actions`, `#weekly-week-tabs`, `#weekly-hint`, `#weekly-tbl-wrap`, `#weekly-tbl`, `#weekly-tbody`
+- Buttons: `#btn-clear-weekly`, `#btn-auto-weekly`
+- Rows: `.weekly-emp-row[data-emp-id]`; cells: `.weekly-emp-name-cell`, `.weekly-emp-hours`
+
+### Settings (`pages/settings.js`)
+- Container: `#settings-page`, `#settings-months-card`, `#settings-months-tbl`, `#settings-export-card`, `#settings-account-card`
+- Buttons: `#btn-select-all-months`, `#btn-deselect-all-months`, `#btn-export-excel`, `#btn-logout`
+- Rows: `.month-row[data-month]`; cells: `.month-name-cell`, `.month-actions-cell`
+- Button classes: `.btn-export-month`, `.btn-delete-month`
