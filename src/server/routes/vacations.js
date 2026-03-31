@@ -1,6 +1,7 @@
 
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { validate, VacationSchema } from '../validate.js';
 
 async function vacationsRoutes(fastify) {
   fastify.addHook('preHandler', requireAuth);
@@ -12,10 +13,9 @@ async function vacationsRoutes(fastify) {
   });
 
   // PUT /api/vacations/:month/:empId
-  fastify.put('/api/vacations/:month/:empId', async (req, reply) => {
+  fastify.put('/api/vacations/:month/:empId', async (req) => {
     const { month, empId } = req.params;
-    const { days } = req.body || {};
-    if (days == null) return reply.code(400).send({ error: 'days required' });
+    const { days } = validate(VacationSchema, req.body);
 
     if (days <= 0) {
       db.prepare('DELETE FROM vacations WHERE month_key = ? AND employee_id = ?').run(month, empId);

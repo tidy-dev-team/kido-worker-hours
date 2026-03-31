@@ -1,6 +1,7 @@
 
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { validate, MonthCreateSchema, MonthUpdateSchema } from '../validate.js';
 
 async function monthsRoutes(fastify) {
   fastify.addHook('preHandler', requireAuth);
@@ -15,26 +16,21 @@ async function monthsRoutes(fastify) {
   });
 
   // POST /api/months
-  fastify.post('/api/months', async (req, reply) => {
-    const { monthKey, workDays, holidays = [] } = req.body || {};
-    if (!monthKey) return reply.code(400).send({ error: 'monthKey required' });
-
+  fastify.post('/api/months', async (req) => {
+    const { monthKey, workDays, holidays } = validate(MonthCreateSchema, req.body);
     db.prepare(`INSERT INTO months (month_key, work_days, holidays) VALUES (?,?,?)
                 ON CONFLICT(month_key) DO UPDATE SET work_days=excluded.work_days, holidays=excluded.holidays`)
       .run(monthKey, workDays ?? null, JSON.stringify(holidays));
-
     return { ok: true };
   });
 
   // PUT /api/months/:month
-  fastify.put('/api/months/:month', async (req, reply) => {
+  fastify.put('/api/months/:month', async (req) => {
     const { month } = req.params;
-    const { workDays, holidays } = req.body || {};
-
+    const { workDays, holidays } = validate(MonthUpdateSchema, req.body);
     db.prepare(`INSERT INTO months (month_key, work_days, holidays) VALUES (?,?,?)
                 ON CONFLICT(month_key) DO UPDATE SET work_days=excluded.work_days, holidays=excluded.holidays`)
-      .run(month, workDays ?? null, JSON.stringify(holidays ?? []));
-
+      .run(month, workDays ?? null, JSON.stringify(holidays));
     return { ok: true };
   });
 

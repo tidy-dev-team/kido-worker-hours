@@ -92,3 +92,11 @@ CREATE TABLE IF NOT EXISTS weekly_schedule (
   client_ids TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY (month_key, employee_id, day)
 );
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_sessions_expires   ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_alloc_month        ON allocations(month_key);
+CREATE INDEX IF NOT EXISTS idx_alloc_emp          ON allocations(employee_id);
+CREATE INDEX IF NOT EXISTS idx_weekly_month       ON weekly_schedule(month_key);
+CREATE INDEX IF NOT EXISTS idx_cmh_client         ON client_monthly_hours(client_id);
+CREATE INDEX IF NOT EXISTS idx_emh_emp            ON employee_monthly_hours(employee_id);

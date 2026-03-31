@@ -2,7 +2,8 @@
 import bcrypt from 'bcrypt';
 import { nanoid } from 'nanoid';
 import db from '../db.js';
-import { requireAuth, requireAdmin } from '../auth.js';
+import { requireAdmin } from '../auth.js';
+import { validate, InviteSchema, AcceptInviteSchema } from '../validate.js';
 
 async function usersRoutes(fastify) {
   // GET /api/users — admin only
@@ -12,8 +13,7 @@ async function usersRoutes(fastify) {
 
   // POST /api/users/invite — admin only, create invite token
   fastify.post('/api/users/invite', { preHandler: requireAdmin }, async (req, reply) => {
-    const { email, name, role = 'member' } = req.body || {};
-    if (!email || !name) return reply.code(400).send({ error: 'email and name required' });
+    const { email, name, role } = validate(InviteSchema, req.body);
 
     const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
     if (existing) return reply.code(409).send({ error: 'User already exists' });
@@ -29,8 +29,7 @@ async function usersRoutes(fastify) {
 
   // POST /api/users/accept-invite — public, sets password from invite token
   fastify.post('/api/users/accept-invite', async (req, reply) => {
-    const { token, password } = req.body || {};
-    if (!token || !password) return reply.code(400).send({ error: 'token and password required' });
+    const { token, password } = validate(AcceptInviteSchema, req.body);
 
     const user = db.prepare('SELECT * FROM users WHERE invite_token = ?').get(token);
     if (!user) return reply.code(400).send({ error: 'Invalid or expired invite' });
