@@ -1,6 +1,7 @@
 
 import db from '../db.js';
 import { requireAdmin } from '../auth.js';
+import { buildHoursMap, serializeClient, serializeEmployee } from '../utils.js';
 
 async function exportRoutes(fastify) {
   fastify.addHook('preHandler', requireAdmin);
@@ -9,39 +10,17 @@ async function exportRoutes(fastify) {
   fastify.get('/api/export', async () => {
     // Clients
     const clientRows = db.prepare('SELECT * FROM clients ORDER BY name').all();
-    const monthlyHours = db.prepare('SELECT * FROM client_monthly_hours').all();
-    const billedHours = db.prepare('SELECT * FROM client_billed_hours').all();
-    const clients = clientRows.map(c => ({
-      id: c.id,
-      name: c.name,
-      type: c.type,
-      active: c.active === 1,
-      hoursBank: c.hours_bank,
-      weeklyDay: c.weekly_day ? JSON.parse(c.weekly_day) : null,
-      monthlyHours: Object.fromEntries(
-        monthlyHours.filter(r => r.client_id === c.id).map(r => [r.month_key, r.hours])
-      ),
-      billedHours: Object.fromEntries(
-        billedHours.filter(r => r.client_id === c.id).map(r => [r.month_key, r.hours])
-      ),
-    }));
+    const mhMap = buildHoursMap(db.prepare('SELECT * FROM client_monthly_hours').all(), 'client_id');
+    const bhMap = buildHoursMap(db.prepare('SELECT * FROM client_billed_hours').all(), 'client_id');
+    const clients = clientRows.map(c => serializeClient(c, mhMap, bhMap));
 
-    // Employees
+    // Employees — export format uses `hidden` only (no `visible`), matches migrate-localstorage.js
     const empRows = db.prepare('SELECT * FROM employees ORDER BY name').all();
-    const empMonthlyHours = db.prepare('SELECT * FROM employee_monthly_hours').all();
-    const employees = empRows.map(e => ({
-      id: e.id,
-      name: e.name,
-      role: e.role,
-      email: e.email,
-      slackWebhook: e.slack_webhook,
-      scope: e.scope,
-      hidden: e.visible === 0,
-      preferredClients: e.preferred_clients ? JSON.parse(e.preferred_clients) : [],
-      monthlyHours: Object.fromEntries(
-        empMonthlyHours.filter(r => r.employee_id === e.id).map(r => [r.month_key, r.hours])
-      ),
-    }));
+    const empMhMap = buildHoursMap(db.prepare('SELECT * FROM employee_monthly_hours').all(), 'employee_id');
+    const employees = empRows.map(e => {
+      const { visible, ...emp } = serializeEmployee(e, empMhMap);
+      return emp;
+    });
 
     // Months
     const monthRows = db.prepare('SELECT * FROM months ORDER BY month_key').all();
