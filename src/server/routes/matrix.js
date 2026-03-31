@@ -1,6 +1,7 @@
 
 import db from '../db.js';
 import { requireAuth } from '../auth.js';
+import { validate, MatrixBulkSchema, MatrixCellSchema } from '../validate.js';
 
 async function matrixRoutes(fastify) {
   fastify.addHook('preHandler', requireAuth);
@@ -18,18 +19,16 @@ async function matrixRoutes(fastify) {
   });
 
   // PUT /api/matrix/:month — bulk replace entire month matrix
-  fastify.put('/api/matrix/:month', async (req, reply) => {
+  fastify.put('/api/matrix/:month', async (req) => {
     const { month } = req.params;
-    const matrix = req.body; // { empId: { clientId: hours } }
-    if (!matrix || typeof matrix !== 'object') return reply.code(400).send({ error: 'matrix object required' });
-
+    const matrix = validate(MatrixBulkSchema, req.body);
     const insert = db.prepare(`INSERT INTO allocations (month_key, employee_id, client_id, hours) VALUES (?,?,?,?)
                                ON CONFLICT(month_key, employee_id, client_id) DO UPDATE SET hours=excluded.hours`);
     db.transaction(() => {
       db.prepare('DELETE FROM allocations WHERE month_key = ?').run(month);
       for (const [eid, clients] of Object.entries(matrix)) {
         for (const [cid, hours] of Object.entries(clients)) {
-          if (parseFloat(hours) > 0) insert.run(month, eid, cid, hours);
+          if (hours > 0) insert.run(month, eid, cid, hours);
         }
       }
     })();
@@ -37,12 +36,11 @@ async function matrixRoutes(fastify) {
   });
 
   // PATCH /api/matrix/:month/:empId/:clientId — update single cell
-  fastify.patch('/api/matrix/:month/:empId/:clientId', async (req, reply) => {
+  fastify.patch('/api/matrix/:month/:empId/:clientId', async (req) => {
     const { month, empId, clientId } = req.params;
-    const { hours } = req.body || {};
-    if (hours == null) return reply.code(400).send({ error: 'hours required' });
+    const { hours } = validate(MatrixCellSchema, req.body);
 
-    if (parseFloat(hours) <= 0) {
+    if (hours <= 0) {
       db.prepare('DELETE FROM allocations WHERE month_key=? AND employee_id=? AND client_id=?')
         .run(month, empId, clientId);
     } else {

@@ -73,6 +73,24 @@ if (existsSync(distDir)) {
   await fastify.register(fastifyStatic, { root: distDir });
 }
 
+// Global error handler — catches validation errors (400) and unexpected crashes (500)
+fastify.setErrorHandler((error, req, reply) => {
+  const code = error.statusCode || error.status || 500;
+  if (code >= 500) fastify.log.error(error);
+  reply.code(code).send({ error: error.message || 'Internal server error' });
+});
+
+// Expired session cleanup — runs on startup and every 24h
+function cleanupSessions() {
+  try {
+    db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
+  } catch (e) {
+    fastify.log.warn('Session cleanup failed: ' + e.message);
+  }
+}
+cleanupSessions();
+setInterval(cleanupSessions, 24 * 60 * 60 * 1000);
+
 // API plugins
 await fastify.register(authPlugin);
 await fastify.register(clientsRoutes);
