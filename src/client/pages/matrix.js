@@ -70,13 +70,13 @@ export function renderMatrix(){
 
 
   return `
-  <div class="page-hd flex items-c just-b">
-    <div><div class="page-title">מטריצת הקצאות</div>
-      <div class="page-sub">${ml} | ${visEmps.length} עובדים מוצגים | עד 6 לקוחות לעובד</div>
+  <div id="matrix-page" class="page-hd flex items-c just-b">
+    <div><div class="page-title" id="matrix-title">מטריצת הקצאות</div>
+      <div class="page-sub" id="matrix-sub">${ml} | ${visEmps.length} עובדים מוצגים | עד 6 לקוחות לעובד</div>
     </div>
-    <span class="chip">${visClients.length} לקוחות</span>
+    <span class="chip" id="matrix-client-count">${visClients.length} לקוחות</span>
   </div>
-  <div class="flex gap2 mb4" style="flex-wrap:wrap;align-items:center">
+  <div id="matrix-legend" class="flex gap2 mb4" style="flex-wrap:wrap;align-items:center">
     <div class="legend-item"><span class="legend-dot" style="background:#eef2ff;border:1px solid #6366f1"></span> מוקצה</div>
     <div class="legend-item"><span class="legend-dot" style="background:#fff0f0;border:1px solid var(--danger)"></span> חריגה</div>
     <div class="legend-item"><span class="legend-dot" style="background:#f0fdf4;border:1px solid var(--success)"></span> תוך גבול</div>
@@ -114,19 +114,19 @@ export function renderMatrix(){
       <div style="font-size:22px;font-weight:700;color:${col};font-family:var(--font-mono,monospace)">${val}</div>
       <div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>
     </div>`;
-    const kpiBar=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+    const kpiBar=`<div id="matrix-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
       ${kpiCard('שעות לקוחות',totalCont+'h','מוזמן החודש',clientCol)}
       ${kpiCard('קיבולת עובדים',totalCap+'h',visEmps.length+' עובדים פעילים','var(--primary)')}
       ${kpiCard('ניצולת',utilPct+'%',totalAlloc+'h מוקצה',utilCol)}
       ${kpiCard('פער קיבולת',(gap>=0?'+':'')+gap+'h',gap>=0?'קיבולת עודפת':'חסר קיבולת',gapCol)}
     </div>`;
-    return kpiBar+`<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+    return kpiBar+`<div id="matrix-toolbar" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
       <span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">פעולות</span>
       <div style="width:1px;background:var(--border);align-self:stretch;min-height:32px"></div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">ניהול חודש</span>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-success btn-sm" onclick="autoDistribute('${m}')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v2M6.5 10v2M1 6.5h2M10 6.5h2M2.8 2.8l1.4 1.4M8.8 8.8l1.4 1.4M2.8 10.2l1.4-1.4M8.8 4.2l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.3"/></svg> פיזור אוטומטי</button>
+          <button class="btn btn-success btn-sm" id="btn-auto-distribute" onclick="autoDistribute('${m}')"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v2M6.5 10v2M1 6.5h2M10 6.5h2M2.8 2.8l1.4 1.4M8.8 8.8l1.4 1.4M2.8 10.2l1.4-1.4M8.8 4.2l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.3"/></svg> פיזור אוטומטי</button>
           <button class="btn btn-sm" style="background:var(--surface-2);border:1px solid var(--border);color:var(--danger);font-size:12px;display:flex;align-items:center;gap:5px" onclick="if(confirm('מחיקת כל ההקצאות של ${mkLabel(m)} — פעולה זו אינה הפיכה. להמשיך?'))resetMonth('${m}')">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3h8M5 3V2h2v1M5 5v4M7 5v4M3 3l.5 7h5l.5-7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             נקה מטריצה
@@ -144,8 +144,8 @@ export function renderMatrix(){
     <button class="btn btn-sm" style="min-width:110px;${_matrixView==='cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="setMatrixView('cards');renderPage()">👤 לפי עובד</button>
     <button class="btn btn-sm" style="min-width:110px;${_matrixView==='client-cards'?'background:var(--primary);color:#fff':'background:var(--surface);color:var(--text);border:1px solid var(--border)'}" onclick="setMatrixView('client-cards');renderPage()"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 12V6l5-3.5 5 3.5v6" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><rect x="4.5" y="7.5" width="2" height="4.5" rx="0.4" fill="currentColor"/></svg> לפי לקוח</button>
   </div>`:''}
-  <div class="mx-layout">
-    <div class="mx-wrap">
+  <div class="mx-layout" id="matrix-layout">
+    <div class="mx-wrap" id="matrix-wrap">
       ${_matrixView==='client-cards'?(()=>{
         const cards=visClients.map(c=>{
           const cont=getClientHours(c,m),alloc=getClientAllocated(c.id,m);
@@ -200,14 +200,14 @@ export function renderMatrix(){
           </div>`;
         }).join('');
         return `<div class="emp-cards-grid" style="padding:4px 0">${cards}</div>`;
-      })():`<table class="mx-tbl">
+      })():`<table class="mx-tbl" id="matrix-tbl">
         <thead><tr>
           <th class="mx-th-emp">עובד</th>
           ${cHeaders}
         </tr></thead>
-        <tbody>
+        <tbody id="matrix-tbody">
           ${empRows}
-          <tr class="mx-c-tot">
+          <tr class="mx-c-tot" id="matrix-col-totals">
             <td class="mx-td-emp" style="font-size:12px;color:var(--muted)">סה״כ לקוח</td>
             ${cTots}
           </tr>

@@ -43,10 +43,10 @@ const _appHTML = document.getElementById('app').innerHTML;
 
 function showLogin(errorMsg) {
   document.getElementById('app').innerHTML = `
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--surface)">
-      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:40px 36px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.15)">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
-          <div style="background:var(--primary);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+    <div id="login-page" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--surface)">
+      <div id="login-card" style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:40px 36px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.15)">
+        <div id="login-logo" style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
+          <div class="s-logo-icon" style="background:var(--primary);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#fff" stroke-width="1.5"/><path d="M8 4.5V8l2.5 2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
           </div>
           <div>
@@ -63,8 +63,8 @@ function showLogin(errorMsg) {
             <label class="fl">סיסמה</label>
             <input id="login-password" type="password" class="fi" placeholder="••••••••" autocomplete="current-password" required>
           </div>
-          ${errorMsg ? `<div style="color:var(--danger);font-size:13px;text-align:center">${errorMsg}</div>` : ''}
-          <button type="submit" class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px">כניסה</button>
+          ${errorMsg ? `<div id="login-error" style="color:var(--danger);font-size:13px;text-align:center">${errorMsg}</div>` : ''}
+          <button type="submit" id="btn-login" class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px">כניסה</button>
         </form>
       </div>
     </div>`;
