@@ -92,7 +92,7 @@ export function renderOverview(){
     else if(cont>0&&alloc>0)status='<span class="badge b-warn">⚠ חלקי</span>';
     else if(cont>0)status='<span class="badge b-danger">✗ ריק</span>';
     const diffHtml=diff===0?'—':`<span style="color:${diff>0?'var(--danger)':'var(--warning)'}">${diff>0?'+':''}${diff}</span>`;
-    return `<tr><td><strong>${c.name}</strong></td><td>${clientTypeBadge(c.type)}</td><td>${cont}</td><td>${alloc}</td><td>${diffHtml}</td><td>${status}</td></tr>`;
+    return `<tr class="overview-client-row" data-client-id="${c.id}"><td><strong>${c.name}</strong></td><td>${clientTypeBadge(c.type)}</td><td>${cont}</td><td>${alloc}</td><td>${diffHtml}</td><td>${status}</td></tr>`;
   }).join('');
 
   // ── Trend comparison ──
@@ -106,7 +106,7 @@ export function renderOverview(){
     const diff=utilPct-prevUtil;
     const diffStr=diff>0?`+${diff}%`:diff<0?`${diff}%`:'ללא שינוי';
     const diffCol=diff>0?'var(--success)':diff<0?'var(--danger)':'var(--muted)';
-    trendSection=`<div class="ins-section">
+    trendSection=`<div class="ins-section" id="ins-trend">
       <div class="ins-section-hd">
         <div class="ins-section-icon" style="background:#eff6ff"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 10.5L5 6l3 2.5L12 2.5" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
         <div><div class="ins-section-title">השוואה לחודש קודם</div><div class="ins-section-sub">${mkLabel(prevMk)}</div></div>
@@ -121,46 +121,46 @@ export function renderOverview(){
   }
 
   return `
-  <div class="page-hd flex items-c just-b">
-    <div><div class="page-title">מבט על</div><div class="page-sub">${ml} | ${visEmps} עובדים פעילים · ${clientCov.length} לקוחות עם שעות</div></div>
+  <div id="overview-page" class="page-hd flex items-c just-b">
+    <div><div class="page-title" id="overview-title">מבט על</div><div class="page-sub" id="overview-sub">${ml} | ${visEmps} עובדים פעילים · ${clientCov.length} לקוחות עם שעות</div></div>
   </div>
 
   <!-- Alerts bar -->
-  <div style="margin-bottom:20px">
-    ${alerts.map(a=>`<div class="ins-alert ${a.type}" style="margin-bottom:6px"><span class="ins-alert-icon">${a.icon}</span><span>${a.text}</span></div>`).join('')}
+  <div id="overview-alerts" style="margin-bottom:20px">
+    ${alerts.map((a,i)=>`<div class="ins-alert ${a.type}" id="overview-alert-${i}" style="margin-bottom:6px"><span class="ins-alert-icon">${a.icon}</span><span>${a.text}</span></div>`).join('')}
   </div>
 
   <!-- KPIs: 6 cards -->
-  <div class="kpi-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:24px">
-    <div class="kpi p"><div class="kpi-accent"></div><div class="kpi-lbl">שעות לקוחות</div><div class="kpi-val">${totalC.toLocaleString()}</div><div class="kpi-sub">סה״כ מוזמן</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M3 21V7l7-4 7 4v14" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="13" width="3" height="8" rx="0.5" fill="currentColor"/></svg></div></div>
-    <div class="kpi s"><div class="kpi-accent"></div><div class="kpi-lbl">קיבולת עובדים</div><div class="kpi-val">${totalCap.toLocaleString()}</div><div class="kpi-sub">סה״כ זמין</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
-    <div class="kpi ${utilPct>100?'d':utilPct>80?'w':'s'}"><div class="kpi-accent"></div><div class="kpi-lbl">ניצולת</div><div class="kpi-val" style="color:${capColor}">${utilPct}%</div><div class="kpi-sub">${totalAlloc}h מוקצות</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><polyline points="3,17 8,11 13,14 21,6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
-    <div class="kpi ${gap<0?'d':'w'}"><div class="kpi-accent"></div><div class="kpi-lbl">פער קיבולת</div><div class="kpi-val">${gap>0?'+':''}${gap}</div><div class="kpi-sub">${gap>=0?'עודף':'חסר'}</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M13 3L21 12 13 21M3 12h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
-    <div class="kpi w"><div class="kpi-accent"></div><div class="kpi-lbl">ימי עבודה</div><div class="kpi-val">${wd.effective}</div><div class="kpi-sub">${wd.off} חגים · ${wd.half} ערבי חג</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v3M16 2v3M3 9h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
-    <div class="kpi ${totalVacDays>0?'w':'s'}"><div class="kpi-accent"></div><div class="kpi-lbl">ימי חופשה</div><div class="kpi-val">${totalVacDays}</div><div class="kpi-sub">${vacData.length} עובדים</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M17 8C17 11.3137 14.3137 14 11 14C7.68629 14 5 11.3137 5 8C5 4.68629 7.68629 2 11 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M19 2L19 8L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 22C3 19 6 17 11 17C16 17 19 19 19 22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+  <div id="overview-kpis" class="kpi-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:24px">
+    <div class="kpi p" id="kpi-client-hours"><div class="kpi-accent"></div><div class="kpi-lbl">שעות לקוחות</div><div class="kpi-val">${totalC.toLocaleString()}</div><div class="kpi-sub">סה״כ מוזמן</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M3 21V7l7-4 7 4v14" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="13" width="3" height="8" rx="0.5" fill="currentColor"/></svg></div></div>
+    <div class="kpi s" id="kpi-emp-capacity"><div class="kpi-accent"></div><div class="kpi-lbl">קיבולת עובדים</div><div class="kpi-val">${totalCap.toLocaleString()}</div><div class="kpi-sub">סה״כ זמין</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+    <div class="kpi ${utilPct>100?'d':utilPct>80?'w':'s'}" id="kpi-utilization"><div class="kpi-accent"></div><div class="kpi-lbl">ניצולת</div><div class="kpi-val" style="color:${capColor}">${utilPct}%</div><div class="kpi-sub">${totalAlloc}h מוקצות</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><polyline points="3,17 8,11 13,14 21,6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="kpi ${gap<0?'d':'w'}" id="kpi-capacity-gap"><div class="kpi-accent"></div><div class="kpi-lbl">פער קיבולת</div><div class="kpi-val">${gap>0?'+':''}${gap}</div><div class="kpi-sub">${gap>=0?'עודף':'חסר'}</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M13 3L21 12 13 21M3 12h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <div class="kpi w" id="kpi-work-days"><div class="kpi-accent"></div><div class="kpi-lbl">ימי עבודה</div><div class="kpi-val">${wd.effective}</div><div class="kpi-sub">${wd.off} חגים · ${wd.half} ערבי חג</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 2v3M16 2v3M3 9h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+    <div class="kpi ${totalVacDays>0?'w':'s'}" id="kpi-vacation-days"><div class="kpi-accent"></div><div class="kpi-lbl">ימי חופשה</div><div class="kpi-val">${totalVacDays}</div><div class="kpi-sub">${vacData.length} עובדים</div><div class="kpi-ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M17 8C17 11.3137 14.3137 14 11 14C7.68629 14 5 11.3137 5 8C5 4.68629 7.68629 2 11 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M19 2L19 8L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 22C3 19 6 17 11 17C16 17 19 19 19 22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
   </div>
 
   <!-- 3 charts -->
-  <div class="chart-grid" style="grid-template-columns:2fr 1fr 2fr;margin-bottom:24px">
-    <div class="chart-card"><div class="chart-title">שעות לקוח — מוזמן vs. מוקצה</div><canvas id="ch-alloc" height="220"></canvas></div>
-    <div class="chart-card" style="display:flex;flex-direction:column;align-items:center">
+  <div id="overview-charts" class="chart-grid" style="grid-template-columns:2fr 1fr 2fr;margin-bottom:24px">
+    <div class="chart-card" id="chart-card-alloc"><div class="chart-title">שעות לקוח — מוזמן vs. מוקצה</div><canvas id="ch-alloc" height="220"></canvas></div>
+    <div class="chart-card" id="chart-card-type" style="display:flex;flex-direction:column;align-items:center">
       <div class="chart-title" style="align-self:flex-start">לפי סוג לקוח</div>
       <canvas id="ch-type" width="200" height="200" style="max-width:200px;margin:auto"></canvas>
     </div>
-    <div class="chart-card"><div class="chart-title">מגמה חודשית — שעות</div><canvas id="ch-trend" height="220"></canvas></div>
+    <div class="chart-card" id="chart-card-trend"><div class="chart-title">מגמה חודשית — שעות</div><canvas id="ch-trend" height="220"></canvas></div>
   </div>
 
   <!-- Insight sections grid -->
-  <div class="ins-grid" style="margin-bottom:24px">
+  <div id="overview-insights" class="ins-grid" style="margin-bottom:24px">
     <!-- Employee utilization -->
-    <div class="ins-section">
+    <div class="ins-section" id="ins-emp-util">
       <div class="ins-section-hd">
         <div class="ins-section-icon" style="background:#eff6ff"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="3.5" r="2.5" stroke="#2563eb" stroke-width="1.3"/><path d="M1 12c0-2 1.8-3.5 4-3.5s4 1.5 4 3.5" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round"/><path d="M10.5 5.5v4M8.5 7.5h4" stroke="#2563eb" stroke-width="1.3" stroke-linecap="round"/></svg></div>
         <div><div class="ins-section-title">ניצולת עובדים</div><div class="ins-section-sub">הקצאות מול קיבולת</div></div>
       </div>
-      <div class="ins-section-bd">
+      <div class="ins-section-bd" id="ins-emp-util-list">
         ${empUtils.map(({e,cap,alloc,pct,vac})=>`
-          <div class="ins-row">
+          <div class="ins-row ins-emp-row" data-emp-id="${e.id}">
             <div class="ins-row-name">${e.name}${vac>0?`<span style="font-size:10px;color:var(--muted);margin-right:4px">(${vac}d)</span>`:''}</div>
             ${utilBar(pct)}
             <div class="ins-row-val" style="min-width:60px;text-align:left">${utilBadge(pct)}</div>
@@ -170,15 +170,15 @@ export function renderOverview(){
     </div>
 
     <!-- Client coverage -->
-    <div class="ins-section">
+    <div class="ins-section" id="ins-client-cov">
       <div class="ins-section-hd">
         <div class="ins-section-icon" style="background:#f0fdf4"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12V5.5l5-3.5 5 3.5V12" stroke="#16a34a" stroke-width="1.3" fill="none" stroke-linejoin="round"/><rect x="5" y="7.5" width="2.5" height="4.5" rx="0.5" fill="#16a34a"/></svg></div>
         <div><div class="ins-section-title">כיסוי לקוחות</div><div class="ins-section-sub">הקצאות מול תכנון</div></div>
       </div>
-      <div class="ins-section-bd">
-        ${clientCov.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין לקוחות עם שעות מתוכננות</div>`:''}
+      <div class="ins-section-bd" id="ins-client-cov-list">
+        ${clientCov.length===0?`<div class="ins-empty-msg" style="font-size:13px;color:var(--muted);padding:8px 0">אין לקוחות עם שעות מתוכננות</div>`:''}
         ${clientCov.map(({c,planned,alloc,pct})=>`
-          <div class="ins-row">
+          <div class="ins-row ins-client-row" data-client-id="${c.id}">
             <div class="ins-row-name">${c.name}</div>
             ${utilBar(pct??0)}
             <div class="ins-row-val" style="min-width:60px;text-align:left">${utilBadge(pct??0)}</div>
@@ -188,16 +188,16 @@ export function renderOverview(){
     </div>
 
     <!-- Holidays -->
-    <div class="ins-section">
+    <div class="ins-section" id="ins-holidays">
       <div class="ins-section-hd">
         <div class="ins-section-icon" style="background:#faf5ff"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="3" width="10" height="9" rx="1.5" stroke="#7c3aed" stroke-width="1.3"/><path d="M5 2v2M9 2v2M2 6.5h10" stroke="#7c3aed" stroke-width="1.3" stroke-linecap="round"/></svg></div>
         <div><div class="ins-section-title">חגים ומועדים</div><div class="ins-section-sub">${hoursLost}h נגרעות מהקיבולת</div></div>
       </div>
-      <div class="ins-section-bd">
-        ${monthHols.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין חגים בחודש זה</div>`:''}
+      <div class="ins-section-bd" id="ins-holidays-list">
+        ${monthHols.length===0?`<div class="ins-empty-msg" style="font-size:13px;color:var(--muted);padding:8px 0">אין חגים בחודש זה</div>`:''}
         <div class="ins-holiday-list">
           ${monthHols.map(([d,h])=>`
-            <div class="ins-holiday ${h.type}">
+            <div class="ins-holiday ${h.type}" data-date="${d}">
               <span>${h.name}</span>
               <span style="font-size:11px;font-weight:600">${d.slice(8)} ב${['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][mo-1]}</span>
             </div>`).join('')}
@@ -210,15 +210,15 @@ export function renderOverview(){
     </div>
 
     <!-- Vacations -->
-    <div class="ins-section">
+    <div class="ins-section" id="ins-vacations">
       <div class="ins-section-hd">
         <div class="ins-section-icon" style="background:#fff7ed"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4 1.5 2 4 2 6.5c0 3 2 5.5 5 6 3-.5 5-3 5-6 0-2.5-2-5-5-5z" stroke="#ea580c" stroke-width="1.3"/><path d="M7 4v3.5l2 1" stroke="#ea580c" stroke-width="1.3" stroke-linecap="round"/></svg></div>
         <div><div class="ins-section-title">חופשות עובדים</div><div class="ins-section-sub">סה״כ ${totalVacDays} ימים</div></div>
       </div>
-      <div class="ins-section-bd">
-        ${vacData.length===0?`<div style="font-size:13px;color:var(--muted);padding:8px 0">אין חופשות מוזנות</div>`:''}
+      <div class="ins-section-bd" id="ins-vacations-list">
+        ${vacData.length===0?`<div class="ins-empty-msg" style="font-size:13px;color:var(--muted);padding:8px 0">אין חופשות מוזנות</div>`:''}
         ${vacData.map(({e,days})=>`
-          <div class="ins-row">
+          <div class="ins-row ins-vac-row" data-emp-id="${e.id}">
             <div class="ins-row-name">${e.name}</div>
             <div style="flex:1;font-size:12px;color:var(--muted)">${days} ימים</div>
             <div class="ins-row-val" style="color:var(--warning)">−${Math.round(days*7*(e.scope??100)/100)}h</div>
@@ -228,14 +228,14 @@ export function renderOverview(){
 
     ${projAlerts.length>0?`
     <!-- Project bank -->
-    <div class="ins-section">
+    <div class="ins-section" id="ins-project-bank">
       <div class="ins-section-hd">
         <div class="ins-section-icon" style="background:#f0fdf4"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="4" width="11" height="8" rx="1.5" stroke="#16a34a" stroke-width="1.3"/><path d="M4.5 4V3a2.5 2.5 0 015 0v1" stroke="#16a34a" stroke-width="1.3" stroke-linecap="round"/><path d="M7 7.5v1.5" stroke="#16a34a" stroke-width="1.3" stroke-linecap="round"/></svg></div>
         <div><div class="ins-section-title">בנק שעות פרויקטים</div><div class="ins-section-sub">מעקב צריכה</div></div>
       </div>
-      <div class="ins-section-bd">
+      <div class="ins-section-bd" id="ins-project-bank-list">
         ${projAlerts.map(({c,remaining,pct})=>`
-          <div class="ins-row">
+          <div class="ins-row ins-proj-row" data-client-id="${c.id}">
             <div class="ins-row-name">${c.name}</div>
             <div class="ins-bar-wrap" style="flex:1"><div class="ins-bar" style="width:${Math.min(pct,100)}%;background:${pct>80?'var(--danger)':pct>50?'var(--warning)':'var(--success)'}"></div></div>
             <div class="ins-row-val" style="min-width:60px;text-align:left;color:${remaining<20?'var(--danger)':'var(--muted)'}">נותר ${remaining}h</div>
@@ -250,9 +250,9 @@ export function renderOverview(){
   ${generateBizInsights(mk)}
 
   <!-- Client status table -->
-  <div class="card">
+  <div class="card" id="overview-client-status">
     <div class="card-hd"><div class="card-title">סטטוס לקוחות — ${ml}</div></div>
-    <div class="tbl-wrap"><table>
+    <div class="tbl-wrap"><table id="overview-client-tbl">
       <thead><tr><th>לקוח</th><th>סוג</th><th>מוזמן</th><th>מוקצה</th><th>פער</th><th>סטטוס</th></tr></thead>
       <tbody>${clientRows}</tbody>
     </table></div>
@@ -423,13 +423,13 @@ export function generateBizInsights(mk){
 
   if(!insights.length)return'';
 
-  return`<div style="margin-bottom:24px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+  return`<div id="overview-biz-insights" style="margin-bottom:24px">
+    <div class="biz-insights-hd" style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2a5.5 5.5 0 100 11A5.5 5.5 0 007.5 2z" stroke="var(--primary)" stroke-width="1.4"/><path d="M7.5 5.5v3M7.5 10v.5" stroke="var(--primary)" stroke-width="1.4" stroke-linecap="round"/></svg>
       <span style="font-weight:700;font-size:14px">תובנות עסקיות</span>
       <span style="font-size:11px;color:var(--muted)">ניתוח על בסיס ${histMonths.length} חודשים — ${histMonths.map(m=>mkLabel(m).split(' ')[0]).join(', ')}</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px">
+    <div class="biz-insights-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:10px">
       ${insights.join('')}
     </div>
   </div>`

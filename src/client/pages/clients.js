@@ -39,39 +39,39 @@ export function renderClients(){
         <div class="pb-wrap"><div class="pb ${bc2}" style="width:${Math.min(pct,100)}%"></div></div>
       </div>`;
     }
-    return `<tr${isInactive?' class="emp-hidden"':''}>
-      <td>
+    return `<tr class="client-row${isInactive?' emp-hidden':''}" data-client-id="${c.id}">
+      <td class="client-name-cell">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" ${isInactive?'':'checked'} onchange="toggleClientActive('${c.id}')"
+          <input type="checkbox" class="client-active-cb" ${isInactive?'':'checked'} onchange="toggleClientActive('${c.id}')"
             style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary)">
           <strong style="${isInactive?'color:var(--muted)':''}">${c.name}</strong>
           ${isInactive?'<span class="chip">לא פעיל</span>':''}
         </label>
       </td>
-      <td>${clientTypeBadge(c.type)}</td>
-      <td><input type="number" class="fi" style="width:90px;padding:4px 8px" value="${cont}" min="0" onchange="updateClientHours('${c.id}','${m}',this.value)"></td>
-      <td>${bankCol}</td>
-      <td>${alloc}</td>
-      <td style="min-width:110px"><div class="flex items-c gap2"><div class="pb-wrap" style="flex:1"><div class="pb ${bc}" style="width:${Math.min(util,100)}%"></div></div><span class="text-sm text-m" style="min-width:35px">${util}%</span></div></td>
+      <td class="client-type-cell">${clientTypeBadge(c.type)}</td>
+      <td class="client-hours-cell"><input type="number" class="fi client-hours-inp" style="width:90px;padding:4px 8px" value="${cont}" min="0" onchange="updateClientHours('${c.id}','${m}',this.value)"></td>
+      <td class="client-bank-cell">${bankCol}</td>
+      <td class="client-alloc-cell">${alloc}</td>
+      <td class="client-util-cell" style="min-width:110px"><div class="flex items-c gap2"><div class="pb-wrap" style="flex:1"><div class="pb ${bc}" style="width:${Math.min(util,100)}%"></div></div><span class="text-sm text-m" style="min-width:35px">${util}%</span></div></td>
       <td style="min-width:90px">${(()=>{const wd=c.weeklyDay!=null?(Array.isArray(c.weeklyDay)?c.weeklyDay:[c.weeklyDay]):[];if(!wd.length)return'<span class="text-m text-sm">—</span>';const names={0:'א׳',1:'ב׳',2:'ג׳',3:'ד׳',4:'ה׳'};return'<div style="display:flex;gap:4px;flex-wrap:wrap">'+wd.map(d=>'<span style="background:var(--primary-light,#ede9fe);color:var(--primary);border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600">'+names[d]+'</span>').join('')+'</div>';})()}</td>
-      <td><div class="actions">
-        <button class="btn btn-s btn-sm" onclick="openClientModal('${c.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
-        <button class="btn btn-d btn-sm" onclick="deleteClient('${c.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <td class="client-actions-cell"><div class="actions">
+        <button class="btn btn-s btn-sm btn-edit-client" onclick="openClientModal('${c.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
+        <button class="btn btn-d btn-sm btn-delete-client" onclick="deleteClient('${c.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div></td>
     </tr>`;
   }).join('');
 
   return `
-  <div class="page-hd flex items-c just-b">
-    <div><div class="page-title">לקוחות</div><div class="page-sub">${activeCount} פעילים מתוך ${state.clients.length} | ${retC} ריטיינר | ${projC} פרויקט${intC?` | ${intC} פנימי`:''} | ${totalH} שעות ב${ml}</div></div>
-    <div class="flex gap2">
-      <button class="btn btn-s btn-sm" onclick="setClientShowInactive(${!_clientShowInactive});renderPage()">${_clientShowInactive?'הסתר לא פעילים':'הצג לא פעילים'}</button>
-      <button class="btn btn-p" onclick="openClientModal()">+ הוסף לקוח</button>
+  <div id="clients-page" class="page-hd flex items-c just-b">
+    <div><div class="page-title" id="clients-title">לקוחות</div><div class="page-sub" id="clients-sub">${activeCount} פעילים מתוך ${state.clients.length} | ${retC} ריטיינר | ${projC} פרויקט${intC?` | ${intC} פנימי`:''} | ${totalH} שעות ב${ml}</div></div>
+    <div class="flex gap2" id="clients-actions">
+      <button class="btn btn-s btn-sm" id="btn-toggle-inactive" onclick="setClientShowInactive(${!_clientShowInactive});renderPage()">${_clientShowInactive?'הסתר לא פעילים':'הצג לא פעילים'}</button>
+      <button class="btn btn-p" id="btn-add-client" onclick="openClientModal()">+ הוסף לקוח</button>
     </div>
   </div>
-  <div class="card">
+  <div class="card" id="clients-card">
     <div class="card-hd"><div class="card-title">רשימת לקוחות</div><span class="text-sm text-m">☑ = פעיל במטריצה | עריכת שעות ישירה לחודש: ${ml}</span></div>
-    <div class="tbl-wrap"><table>
+    <div class="tbl-wrap"><table id="clients-tbl">
       <thead><tr><th>☑ שם לקוח</th><th>סוג</th><th>שעות ${ml}</th><th>🏦 בנק שעות</th><th>מוקצות</th><th>ניצולת</th><th>ימי ויקלי</th><th>פעולות</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
@@ -121,10 +121,10 @@ export function openClientModal(cid=null){
   const _wdChecks='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">'+[[0,'ראשון'],[1,'שני'],[2,'שלישי'],[3,'רביעי'],[4,'חמישי']].map(function(p){var v=p[0],lbl=p[1];return'<label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" id="c-wd-'+v+'" value="'+v+'" '+(_existWd.includes(v)?'checked':'')+'><span>'+lbl+'</span></label>';}).join('')+'</div>';
   document.getElementById('modal-root').innerHTML=`
   <div class="overlay" onclick="if(event.target===this)closeModal()">
-    <div class="modal" style="max-width:580px">
+    <div class="modal modal-client" id="modal-client" style="max-width:580px">
       <div class="modal-hd">
         <div class="modal-t">${c?'עריכת לקוח':'הוספת לקוח'}</div>
-        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+        <button class="btn btn-s btn-close-modal" style="padding:5px 9px" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-bd">
         <div class="fg"><label class="fl">שם לקוח</label>
@@ -159,11 +159,11 @@ export function openClientModal(cid=null){
           <label class="fl">ימי ויקלי <span class="text-m text-sm">(ימים קבועים לפגישה שבועית)</span></label>
           ${_wdChecks}
         </div>
-        <div class="fg">
+        <div class="fg" id="client-assigned-emps">
           <label class="fl">עובדים משויכים <span class="text-m text-sm">(עדיפות בפיזור אוטומטי)</span></label>
-          <div class="pref-grid">
+          <div class="pref-grid" id="client-emp-pref-grid">
             ${state.employees.map(emp=>`
-              <label class="pref-item">
+              <label class="pref-item pref-item-emp" data-emp-id="${emp.id}">
                 <input type="checkbox" data-cemp="${emp.id}" ${cid&&(emp.preferredClients||[]).includes(cid)?'checked':''}>
                 <span style="flex:1">${emp.name}</span>
                 ${emp.role?`<span style="font-size:10px;color:var(--muted)">${emp.role}</span>`:''}
@@ -173,8 +173,8 @@ export function openClientModal(cid=null){
         </div>
       </div>
       <div class="modal-ft">
-        <button class="btn btn-s" onclick="closeModal()">ביטול</button>
-        <button class="btn btn-p" onclick="saveClient('${cid||''}')">שמור</button>
+        <button class="btn btn-s btn-cancel" onclick="closeModal()">ביטול</button>
+        <button class="btn btn-p btn-save-client" id="btn-save-client" onclick="saveClient('${cid||''}')">שמור</button>
       </div>
     </div>
   </div>`;
