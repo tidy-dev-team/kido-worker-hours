@@ -224,38 +224,38 @@ export function renderWeeklySchedule(){
       }
       return '<td id="wc-'+emp.id+'-'+wd.d+'" onclick="wsShowPopover(\''+mk+'\',\''+emp.id+'\','+wd.d+',this)" style="padding:6px 8px;border:1px solid var(--border);vertical-align:top;min-width:120px;cursor:pointer;transition:background 0.1s;'+manualOutline+'" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'">'+inner+'</td>';
     }).join('');
-    return '<tr><td style="padding:8px 14px;border:1px solid var(--border);white-space:nowrap;position:sticky;right:0;background:var(--surface);z-index:1;border-right:2px solid var(--border)"><div style="font-weight:600;font-size:13px">'+emp.name+'</div><div style="font-size:11px;color:'+pctCol+';margin-top:2px">'+totalH+'h / '+availH+'h</div></td>'+cells+'</tr>';
+    return '<tr class="weekly-emp-row" data-emp-id="'+emp.id+'"><td class="weekly-emp-name-cell" style="padding:8px 14px;border:1px solid var(--border);white-space:nowrap;position:sticky;right:0;background:var(--surface);z-index:1;border-right:2px solid var(--border)"><div style="font-weight:600;font-size:13px">'+emp.name+'</div><div class="weekly-emp-hours" style="font-size:11px;color:'+pctCol+';margin-top:2px">'+totalH+'h / '+availH+'h</div></td>'+cells+'</tr>';
   }).join('');
 
   return `
-  <div class="page-hd flex items-c just-b" style="margin-bottom:12px">
+  <div id="weekly-page" class="page-hd flex items-c just-b" style="margin-bottom:12px">
     <div>
-      <div class="page-title">סידור שבועי</div>
-      <div class="page-sub">${ml} | ${emps.length} עובדים | ${weeks.length} שבועות</div>
+      <div class="page-title" id="weekly-title">סידור שבועי</div>
+      <div class="page-sub" id="weekly-sub">${ml} | ${emps.length} עובדים | ${weeks.length} שבועות</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-s btn-sm" onclick="clearWeeklySchedule('${mk}')">
+    <div id="weekly-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-s btn-sm" id="btn-clear-weekly" onclick="clearWeeklySchedule('${mk}')">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         נקה סידור
       </button>
-      <button class="btn btn-s btn-sm" onclick="autoWeeklyDistribute('${mk}')">
+      <button class="btn btn-s btn-sm" id="btn-auto-weekly" onclick="autoWeeklyDistribute('${mk}')">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         פיזור אוטומטי
       </button>
     </div>
   </div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+  <div id="weekly-week-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
     <span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:4px">שבועות:</span>
     ${tabs}
   </div>
-  <div style="font-size:11px;color:var(--muted);margin-bottom:8px">לחץ על תא לעריכה • גבול כתום = עריכה ידנית</div>
-  <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)">
-    <table style="border-collapse:collapse;width:100%">
+  <div id="weekly-hint" style="font-size:11px;color:var(--muted);margin-bottom:8px">לחץ על תא לעריכה • גבול כתום = עריכה ידנית</div>
+  <div id="weekly-tbl-wrap" style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)">
+    <table id="weekly-tbl" style="border-collapse:collapse;width:100%">
       <thead><tr>
-        <th style="padding:8px 14px;text-align:right;background:var(--surface-2);border:1px solid var(--border);font-size:12px;position:sticky;right:0;z-index:2;white-space:nowrap;border-right:2px solid var(--border)">עובד</th>
+        <th class="weekly-emp-hd" style="padding:8px 14px;text-align:right;background:var(--surface-2);border:1px solid var(--border);font-size:12px;position:sticky;right:0;z-index:2;white-space:nowrap;border-right:2px solid var(--border)">עובד</th>
         ${colHeaders}
       </tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody id="weekly-tbody">${rows}</tbody>
     </table>
   </div>`;
 }

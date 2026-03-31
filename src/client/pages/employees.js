@@ -35,10 +35,10 @@ export function renderEmployees(){
       }).join('');
       const noAlloc=clientEntries.length===0;
       const utilColor=util>100?'var(--danger)':util>85?'var(--warning)':'var(--success)';
-      return `<div class="emp-card${isHidden?' emp-card-hidden':''}">
+      return `<div class="emp-card${isHidden?' emp-card-hidden':''}" data-emp-id="${e.id}">
         <div class="emp-card-hd">
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;flex:1;min-width:0">
-            <input type="checkbox" ${isHidden?'':'checked'} onchange="toggleEmpVisibility('${e.id}')"
+            <input type="checkbox" class="emp-visible-cb" ${isHidden?'':'checked'} onchange="toggleEmpVisibility('${e.id}')"
               style="width:14px;height:14px;flex-shrink:0;cursor:pointer;accent-color:var(--primary)">
             <strong style="font-size:14px;${isHidden?'color:var(--muted)':''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.name}</strong>
             ${isHidden?'<span class="chip" style="font-size:10px;flex-shrink:0">מוסתר</span>':''}
@@ -60,10 +60,10 @@ export function renderEmployees(){
           ${noAlloc?`<div style="font-size:11px;color:var(--muted);text-align:center;padding:10px 0">אין הקצאות לחודש זה</div>`:clientRows}
         </div>
         <div class="emp-card-ft">
-          <button class="btn btn-s btn-sm" onclick="openEmpModal('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
-          <button class="btn btn-s btn-sm" title="שלח הקצאה" onclick="sendAllocation('${e.id}')">📤 שלח</button>
-          <button class="btn btn-s btn-sm" title="איפוס לאוטומטי" onclick="resetEmpHours('${e.id}','${m}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          <button class="btn btn-d btn-sm" onclick="deleteEmployee('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-s btn-sm btn-edit-emp" onclick="openEmpModal('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
+          <button class="btn btn-s btn-sm btn-send-alloc" title="שלח הקצאה" onclick="sendAllocation('${e.id}')">📤 שלח</button>
+          <button class="btn btn-s btn-sm btn-reset-hours" title="איפוס לאוטומטי" onclick="resetEmpHours('${e.id}','${m}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-d btn-sm btn-delete-emp" onclick="deleteEmployee('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div>
       </div>`;
     }).join('');
@@ -77,42 +77,42 @@ export function renderEmployees(){
       const isAuto=e.monthlyHours?.[m]===undefined;
       const isHidden=e.visible===false;
       const scope=e.scope!=null?e.scope:100;
-      return `<tr class="${isHidden?'emp-hidden':''}">
-        <td>
+      return `<tr class="emp-row${isHidden?' emp-hidden':''}" data-emp-id="${e.id}">
+        <td class="emp-name-cell">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" ${isHidden?'':'checked'} onchange="toggleEmpVisibility('${e.id}')"
+            <input type="checkbox" class="emp-visible-cb" ${isHidden?'':'checked'} onchange="toggleEmpVisibility('${e.id}')"
               style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary)">
             <strong style="${isHidden?'color:var(--muted)':''}">${e.name}</strong>
             ${isHidden?'<span class="chip">מוסתר</span>':''}
             ${scope<100?`<span class="chip" style="background:var(--primary-light);color:var(--primary);border-color:rgba(218,119,86,.25)">${scope}%</span>`:''}
           </label>
         </td>
-        <td>
+        <td class="emp-role-cell">
           <span class="text-m text-sm">${e.role||'—'}</span>
           ${(e.preferredClients||[]).length>0?`<div style="font-size:10px;color:var(--primary)">★ ${(e.preferredClients||[]).length} לקוחות קבועים</div>`:''}
         </td>
-        <td>
+        <td class="emp-hours-cell">
           <div class="flex items-c gap2">
-            <input type="number" class="fi" style="width:90px;padding:4px 8px" value="${avail}" min="0" onchange="updateEmpHours('${e.id}','${m}',this.value)">
+            <input type="number" class="fi emp-hours-inp" style="width:90px;padding:4px 8px" value="${avail}" min="0" onchange="updateEmpHours('${e.id}','${m}',this.value)">
             ${isAuto?'<span class="chip">אוטו</span>':''}
           </div>
         </td>
-        <td>
-          <input type="number" class="fi" style="width:70px;padding:4px 8px;text-align:center" value="${(state.vacations?.[m]?.[e.id])||0}" min="0" max="30"
+        <td class="emp-vac-cell">
+          <input type="number" class="fi emp-vac-inp" style="width:70px;padding:4px 8px;text-align:center" value="${(state.vacations?.[m]?.[e.id])||0}" min="0" max="30"
             onchange="updateEmpVacDays('${e.id}','${m}',this.value)">
         </td>
         <td>${alloc}</td>
         <td style="min-width:110px"><div class="flex items-c gap2"><div class="pb-wrap" style="flex:1"><div class="pb ${bc}" style="width:${Math.min(util,100)}%"></div></div><span class="text-sm text-m" style="min-width:35px">${util}%</span></div></td>
         <td><span class="${ac>=6?'badge b-warn':''}">${ac} / 6</span></td>
-        <td><div class="actions">
-          <button class="btn btn-s btn-sm" onclick="openEmpModal('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
-          <button class="btn btn-s btn-sm" title="שלח הקצאה" onclick="sendAllocation('${e.id}')">📤 שלח</button>
-          <button class="btn btn-s btn-sm" title="איפוס לאוטומטי" onclick="resetEmpHours('${e.id}','${m}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          <button class="btn btn-d btn-sm" onclick="deleteEmployee('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <td class="emp-actions-cell"><div class="actions">
+          <button class="btn btn-s btn-sm btn-edit-emp" onclick="openEmpModal('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> ערוך</button>
+          <button class="btn btn-s btn-sm btn-send-alloc" title="שלח הקצאה" onclick="sendAllocation('${e.id}')">📤 שלח</button>
+          <button class="btn btn-s btn-sm btn-reset-hours" title="איפוס לאוטומטי" onclick="resetEmpHours('${e.id}','${m}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-d btn-sm btn-delete-emp" onclick="deleteEmployee('${e.id}')"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </div></td>
       </tr>`;
     }).join('');
-    content=`<div class="card">
+    content=`<div class="card" id="emp-list-card">
       <div class="card-hd">
         <div class="card-title">רשימת עובדים</div>
         <span class="flex items-c gap2 text-sm text-m">
@@ -121,7 +121,7 @@ export function renderEmployees(){
           <span class="chip"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M10.5 6a4.5 4.5 0 1 1-1.1-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="7.5,1 9.5,3 7.5,5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> = איפוס לאוטומטי</span>
         </span>
       </div>
-      <div class="tbl-wrap"><table>
+      <div class="tbl-wrap"><table id="emp-tbl">
         <thead><tr><th>☑ שם</th><th>תפקיד</th><th>שעות ${ml}</th><th>ימי חופש</th><th>מוקצות</th><th>ניצולת</th><th>לקוחות</th><th>פעולות</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
@@ -129,16 +129,16 @@ export function renderEmployees(){
   }
 
   return `
-  <div class="page-hd flex items-c just-b">
-    <div><div class="page-title">עובדים</div>
-      <div class="page-sub">${state.employees.length} עובדים | ${visCount} מוצגים במטריצה | ימי עבודה ב${ml}: ${wd} | ברירת מחדל: ${ah}h</div>
+  <div id="employees-page" class="page-hd flex items-c just-b">
+    <div><div class="page-title" id="emp-title">עובדים</div>
+      <div class="page-sub" id="emp-sub">${state.employees.length} עובדים | ${visCount} מוצגים במטריצה | ימי עבודה ב${ml}: ${wd} | ברירת מחדל: ${ah}h</div>
     </div>
-    <div class="flex gap2">
-      <button class="btn btn-s btn-sm" onclick="toggleAllEmployees(true)">הצג הכל</button>
-      <button class="btn btn-s btn-sm" onclick="toggleAllEmployees(false)">הסתר הכל</button>
+    <div class="flex gap2" id="emp-actions">
+      <button class="btn btn-s btn-sm" id="btn-show-all-emps" onclick="toggleAllEmployees(true)">הצג הכל</button>
+      <button class="btn btn-s btn-sm" id="btn-hide-all-emps" onclick="toggleAllEmployees(false)">הסתר הכל</button>
       <button class="btn btn-s btn-sm" onclick="setEmpView('${_empView==='cards'?'table':'cards'}');renderPage()">${_empView==='cards'?'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="9.5" width="12" height="3" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> טבלה':'<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="0.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="0.5" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="7" y="7" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg> כרטיסיות'}</button>
-      <button class="btn btn-s btn-sm" onclick="sendAllAllocations()">📤 שלח לכל</button>
-      <button class="btn btn-p" onclick="openEmpModal()">+ הוסף עובד</button>
+      <button class="btn btn-s btn-sm" id="btn-send-all-alloc" onclick="sendAllAllocations()">📤 שלח לכל</button>
+      <button class="btn btn-p" id="btn-add-emp" onclick="openEmpModal()">+ הוסף עובד</button>
     </div>
   </div>
   ${content}`;
@@ -213,10 +213,10 @@ export function sendAllocation(eid){
   const hasEmail=!!e.email,hasSlack=!!e.slackWebhook;
   document.getElementById('modal-root').innerHTML=`
   <div class="overlay" onclick="if(event.target===this)closeModal()">
-    <div class="modal" style="max-width:500px">
+    <div class="modal modal-send-alloc" id="modal-send-alloc" style="max-width:500px">
       <div class="modal-hd">
         <div class="modal-t">שליחת הקצאה — ${e.name}</div>
-        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+        <button class="btn btn-s btn-close-modal" style="padding:5px 9px" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-bd">
         <label class="fl" style="margin-bottom:6px">הודעה (ניתן לערוך)</label>
@@ -283,16 +283,16 @@ export function sendAllAllocations(){
   const emailCount=emps.filter(e=>e.email).length;
   document.getElementById('modal-root').innerHTML=`
   <div class="overlay" onclick="if(event.target===this)closeModal()">
-    <div class="modal" style="max-width:460px">
+    <div class="modal modal-send-all" id="modal-send-all" style="max-width:460px">
       <div class="modal-hd">
         <div class="modal-t">שליחה לכל העובדים — ${ml}</div>
-        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+        <button class="btn btn-s btn-close-modal" style="padding:5px 9px" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-bd">
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <button class="btn btn-p" style="flex:1" ${emailCount?'':'disabled'}
+        <div class="send-all-btns" style="display:flex;gap:8px;margin-bottom:14px">
+          <button class="btn btn-p btn-send-all-email" id="btn-send-all-email" style="flex:1" ${emailCount?'':'disabled'}
             onclick="sendAllEmails()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><polyline points="1,3.5 7,8.5 13,3.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח לכל במייל (${emailCount})</button>
-          <button class="btn btn-p" style="flex:1;background:#4a154b" ${slackCount?'':'disabled'}
+          <button class="btn btn-p btn-send-all-slack" id="btn-send-all-slack" style="flex:1;background:#4a154b" ${slackCount?'':'disabled'}
             onclick="sendAllSlack()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח לכל ב-Slack (${slackCount})</button>
         </div>
         <div style="max-height:380px;overflow-y:auto">${rows}</div>
@@ -330,10 +330,10 @@ export function openEmpModal(eid=null){
   }).join('');
   document.getElementById('modal-root').innerHTML=`
   <div class="overlay" onclick="if(event.target===this)closeModal()">
-    <div class="modal">
+    <div class="modal modal-employee" id="modal-employee">
       <div class="modal-hd">
         <div class="modal-t">${e?'עריכת עובד':'הוספת עובד'}</div>
-        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+        <button class="btn btn-s btn-close-modal" style="padding:5px 9px" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-bd">
         <div class="frow">
@@ -366,17 +366,17 @@ export function openEmpModal(eid=null){
           <div class="mgrid">${hf}</div>
           <div class="fhint">לשינוי שעות ידני — ערוך ישירות בטבלת העובדים.</div>
         </div>
-        <div class="fg">
+        <div class="fg" id="emp-pref-clients">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
             <label class="fl" style="margin-bottom:0">★ לקוחות קבועים <span class="text-m text-sm">(עדיפות בפיזור אוטומטי)</span></label>
-            <button type="button" class="btn btn-s btn-sm" onclick="openClientModalFromEmp('${eid||''}')">
+            <button type="button" class="btn btn-s btn-sm btn-add-client-from-emp" onclick="openClientModalFromEmp('${eid||''}')">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
               לקוח חדש
             </button>
           </div>
-          <div class="pref-grid">
+          <div class="pref-grid" id="emp-client-pref-grid">
             ${state.clients.map(c=>`
-              <label class="pref-item">
+              <label class="pref-item pref-item-client" data-client-id="${c.id}">
                 <input type="checkbox" data-pref="${c.id}" ${(e?.preferredClients||[]).includes(c.id)?'checked':''}>
                 <span style="flex:1">${c.name}</span>
                 <span style="font-size:10px;color:var(--muted)">${clientTypeLabel(c.type)}</span>
@@ -386,8 +386,8 @@ export function openEmpModal(eid=null){
         </div>
       </div>
       <div class="modal-ft">
-        <button class="btn btn-s" onclick="closeModal()">ביטול</button>
-        <button class="btn btn-p" onclick="saveEmployee('${eid||''}')">שמור</button>
+        <button class="btn btn-s btn-cancel" onclick="closeModal()">ביטול</button>
+        <button class="btn btn-p btn-save-emp" id="btn-save-emp" onclick="saveEmployee('${eid||''}')">שמור</button>
       </div>
     </div>
   </div>`;
@@ -502,14 +502,14 @@ export function openMonthSetupModal(mk){
 
   document.getElementById('modal-root').innerHTML=`
   <div class="overlay" onclick="if(event.target===this)closeModal()">
-    <div class="modal" style="max-width:560px">
+    <div class="modal modal-month-setup" id="modal-month-setup" style="max-width:560px">
       <div class="modal-hd">
         <div class="modal-t" style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="11.5" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M1.5 7h13" stroke="currentColor" stroke-width="1.4"/></svg> הוספת חודש חדש</div>
-        <button class="btn btn-s" style="padding:5px 9px" onclick="closeModal()">✕</button>
+        <button class="btn btn-s btn-close-modal" style="padding:5px 9px" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-bd" style="display:flex;flex-direction:column;gap:18px">
 
-        <div>
+        <div id="ms-month-picker">
           <label class="fl">בחר חודש</label>
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -530,7 +530,7 @@ export function openMonthSetupModal(mk){
           </div>
         </div>
 
-        <div>
+        <div id="ms-calendar">
           <div class="fl" style="margin-bottom:8px">לוח שנה</div>
           <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:separate;border-spacing:2px">
@@ -544,7 +544,7 @@ export function openMonthSetupModal(mk){
           </div>
         </div>
 
-        <div>
+        <div id="ms-workdays">
           <label class="fl">ימי עבודה אפקטיביים בחודש</label>
           <div style="font-size:12px;color:var(--muted);margin-bottom:6px">חישוב אוטו: ${full} מלאים + ${half}×½ ערבי חג = <b>${effective}</b> ימים = <b>${Math.round(effective*7)}h</b></div>
           <div style="display:flex;align-items:center;gap:10px">
@@ -554,10 +554,10 @@ export function openMonthSetupModal(mk){
           </div>
         </div>
 
-        <div>
+        <div id="ms-vacations">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <label class="fl" style="margin:0">ימי חופש לעובדים (${ml})</label>
-            <button class="btn btn-p btn-sm" onclick="addVacRow('${mk}')">
+            <button class="btn btn-p btn-sm btn-add-vac" id="btn-add-vac" onclick="addVacRow('${mk}')">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               הוסף חופשת עובד
             </button>
@@ -565,10 +565,10 @@ export function openMonthSetupModal(mk){
           <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);padding:${vacRows?'6px 10px':'0'}" id="vac-list">${vacRows}</div>
         </div>
 
-        <div style="border-top:1px solid var(--border);padding-top:16px">
+        <div id="ms-new-clients" style="border-top:1px solid var(--border);padding-top:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <label class="fl" style="margin:0">לקוחות חדשים לחודש זה</label>
-            <button class="btn btn-p btn-sm" onclick="addNewClientForm('${mk}','${ml}')">
+            <button class="btn btn-p btn-sm btn-add-nc" id="btn-add-nc" onclick="addNewClientForm('${mk}','${ml}')">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               הוסף לקוח
             </button>
@@ -578,8 +578,8 @@ export function openMonthSetupModal(mk){
 
       </div>
       <div class="modal-ft">
-        <button class="btn btn-s" onclick="closeModal()">ביטול</button>
-        <button class="btn btn-p" onclick="saveMonthSetup('${mk}')">שמור</button>
+        <button class="btn btn-s btn-cancel" onclick="closeModal()">ביטול</button>
+        <button class="btn btn-p btn-save-month" id="btn-save-month" onclick="saveMonthSetup('${mk}')">שמור</button>
       </div>
     </div>
   </div>`;
