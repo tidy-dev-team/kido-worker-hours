@@ -1,6 +1,6 @@
 import { state } from '../state.js';
 import { api } from '../api.js';
-import { mkLabel, initMonthSelect } from '../utils.js';
+import { mkLabel, initMonthSelect, withLoading } from '../utils.js';
 import { calcMonthWorkDays, getEmpHours } from '../working-days.js';
 import { getTotalAllocated, getEmpAllocated, getEmpActiveClients } from '../aggregations.js';
 import { navigate } from '../router.js';
@@ -142,14 +142,17 @@ export function renderSettings(){
 }
 
 export async function exportToJSON(){
-  const data = await api.get('/api/export');
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'workhours-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
+  const btn = document.getElementById('btn-export-json');
+  await withLoading(btn, async () => {
+    const data = await api.get('/api/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'workhours-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 }
 
 export async function deleteMonth(mk){
@@ -168,7 +171,11 @@ export async function deleteMonth(mk){
     const remaining=state.activeMonths;
     state.currentMonth=remaining.length?remaining[remaining.length-1]:'';
   }
-  await api.delete(`/api/months/${mk}`);
+  try {
+    await api.delete(`/api/months/${mk}`);
+  } catch {
+    return;
+  }
   initMonthSelect();
   navigate('settings');
 }
