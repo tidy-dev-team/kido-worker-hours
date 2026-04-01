@@ -789,11 +789,15 @@ export async function saveMonthSetup(mk){
   }
   state.currentMonth=mk;
 
-  await Promise.all([
-    api.put(`/api/months/${mk}`,{workDays:isNaN(days)?null:days,holidays:[]}),
-    ...vacOps,
-    ...newClientOps.filter(Boolean),
-  ]);
+  try {
+    await Promise.all([
+      api.put(`/api/months/${mk}`,{workDays:isNaN(days)?null:days,holidays:[]}),
+      ...vacOps,
+      ...newClientOps.filter(Boolean),
+    ]);
+  } catch {
+    return;
+  }
 
   initMonthSelect();closeModal();renderPage();
 }

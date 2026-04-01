@@ -1,7 +1,7 @@
 import 'chart.js/auto';
 import './style.css';
 
-import { api } from './api.js';
+import { api, setLoginHandler } from './api.js';
 import { loadState } from './state.js';
 import { navigate, onMonthChange, setRenderers, renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView } from './router.js';
 import { initMonthSelect, closeModal, mkKey } from './utils.js';
@@ -95,8 +95,7 @@ async function logout() {
   location.reload();
 }
 
-// Make showLogin accessible from api.js (used on 401)
-window.__showLogin = showLogin;
+setLoginHandler(showLogin);
 
 // ─── App init ─────────────────────────────────────────────────────────────────
 
