@@ -18,6 +18,7 @@ import matrixRoutes from './routes/matrix.js';
 import weeklyRoutes from './routes/weekly.js';
 import usersRoutes from './routes/users.js';
 import exportRoutes from './routes/export.js';
+import notifyRoutes from './routes/notify.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '4000');
@@ -101,6 +102,7 @@ await fastify.register(matrixRoutes);
 await fastify.register(weeklyRoutes);
 await fastify.register(usersRoutes);
 await fastify.register(exportRoutes);
+await fastify.register(notifyRoutes);
 
 // SPA fallback — serve index.html for non-API routes (production only)
 if (existsSync(distDir)) {
