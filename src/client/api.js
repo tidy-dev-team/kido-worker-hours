@@ -1,5 +1,10 @@
 // Fetch wrapper for /api/* — redirects to login on 401
 
+import { showToast } from './utils.js';
+
+let _loginHandler = null;
+export function setLoginHandler(fn) { _loginHandler = fn; }
+
 async function request(method, path, body) {
   const opts = {
     method,
@@ -12,13 +17,15 @@ async function request(method, path, body) {
 
   if (res.status === 401) {
     // Not authenticated — show login
-    window.__showLogin?.();
+    _loginHandler?.();
     throw new Error('401');
   }
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `HTTP ${res.status}`);
+    const msg = data.error || `HTTP ${res.status}`;
+    showToast(msg);
+    throw new Error(msg);
   }
 
   // 204 No Content

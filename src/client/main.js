@@ -1,14 +1,14 @@
 import 'chart.js/auto';
 import './style.css';
 
-import { api } from './api.js';
+import { api, setLoginHandler } from './api.js';
 import { loadState } from './state.js';
 import { navigate, onMonthChange, setRenderers, renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView } from './router.js';
 import { initMonthSelect, closeModal, mkKey } from './utils.js';
 
 import { renderOverview, initCharts } from './pages/overview.js';
 import { renderClients, updateClientHours, deleteClient, toggleClientActive, openClientModal, toggleClientTypeFields, applyToAllMonths, saveClient } from './pages/clients.js';
-import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHours, updateEmpVacDays, resetEmpHours, deleteEmployee, sendAllocation, sendSlackMsg, sendAllAllocations, sendAllEmails, sendAllSlack, openEmpModal, updateScopePreview, saveEmployee, openClientModalFromEmp, openNewMonthModal, openMonthSetupModal, updateVacPreview, onMsDaysChange, addVacRow, activateVacRow, removeVacRow, addNewClientForm, removeClientForm, toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay } from './pages/employees.js';
+import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHours, updateEmpVacDays, resetEmpHours, deleteEmployee, sendAllocation, sendSlackMsg, sendAllAllocations, sendAllEmails, sendAllSlack, openEmpModal, updateScopePreview, saveEmployee, openClientModalFromEmp, openNewMonthModal, openMonthSetupModal, updateVacPreview, onMsDaysChange, addVacRow, activateVacRow, removeVacRow, addNewClientForm, removeClientForm, toggleNcFields, saveMonthSetup, msToggleEditMode, msToggleDay } from './pages/employees.js';
 import { renderMatrix, onMatrixInput, onMatrixChange, copyAllocations, resetMonth } from './pages/matrix.js';
 import { autoDistribute } from './pages/auto-distribute.js';
 import { renderWeeklySchedule, clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient } from './pages/weekly-schedule.js';
@@ -29,7 +29,7 @@ Object.assign(window, {
   openClientModalFromEmp,
   openNewMonthModal, openMonthSetupModal, updateVacPreview, onMsDaysChange,
   addVacRow, activateVacRow, removeVacRow, addNewClientForm, removeClientForm,
-  toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay,
+  toggleNcFields, saveMonthSetup, msToggleEditMode, msToggleDay,
   onMatrixInput, onMatrixChange, copyAllocations, resetMonth, autoDistribute,
   clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient,
   deleteMonth, exportMonthsToExcel, exportToJSON,
@@ -95,8 +95,7 @@ async function logout() {
   location.reload();
 }
 
-// Make showLogin accessible from api.js (used on 401)
-window.__showLogin = showLogin;
+setLoginHandler(showLogin);
 
 // ─── App init ─────────────────────────────────────────────────────────────────
 

@@ -22,6 +22,34 @@ export function mkKey(y,m){return `${y}-${String(m).padStart(2,'0')}`;}
 
 export function closeModal(){document.getElementById('modal-root').innerHTML='';}
 
+export function showToast(msg, type = 'error') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.classList.add('toast-show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('toast-show');
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
+export async function withLoading(btn, asyncFn) {
+  const orig = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    return await asyncFn();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
 export function initMonthSelect(){
   const sel=document.getElementById('month-select');
   sel.innerHTML='';

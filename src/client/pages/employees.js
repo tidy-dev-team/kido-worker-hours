@@ -500,32 +500,6 @@ function _renderMsCalendar(y,m,mk,overrides,editMode){
   </table>`;
 }
 
-export function msToggleEditMode(mk){
-  _msEditMode=!_msEditMode;
-  const btn=document.getElementById('btn-ms-edit-mode');
-  if(btn){btn.textContent=_msEditMode?'✓ סיום עריכה':'✏️ ערוך ימים';btn.className=_msEditMode?'btn btn-p btn-sm':'btn btn-s btn-sm';}
-  const[y,m]=mk.split('-').map(Number);
-  const inner=document.getElementById('ms-calendar-inner');
-  if(inner)inner.innerHTML=_renderMsCalendar(y,m,mk,_msOverrides,_msEditMode);
-}
-
-export function msToggleDay(date,mk){
-  const[y]=date.split('-').map(Number);
-  const autoType=getHolidays(y)[date]?.type;
-  const cur=_msOverrides[date]||(autoType||'work');
-  const next=cur==='work'?'eve':cur==='eve'?'holiday':'work';
-  if(next===autoType||(next==='work'&&!autoType)){delete _msOverrides[date];}
-  else{_msOverrides[date]=next;}
-  const[,m]=mk.split('-').map(Number);
-  const inner=document.getElementById('ms-calendar-inner');
-  if(inner)inner.innerHTML=_renderMsCalendar(y,m,mk,_msOverrides,_msEditMode);
-  const{full,half,off,effective}=_calcMsWorkDays(mk);
-  const legend=document.getElementById('ms-legend');
-  if(legend)legend.innerHTML=_legendHtml(full,half,off);
-  const desc=document.getElementById('ms-days-desc');
-  if(desc)desc.innerHTML=`חישוב אוטו: ${full} מלאים + ${half}×½ ערבי חג = <b>${effective}</b> ימים = <b>${Math.round(effective*7)}h</b>`;
-}
-
 export function openMonthSetupModal(mk){
   mk=mk||state.currentMonth;
   _ncIdx=0;_vacIdx=0;
@@ -639,6 +613,33 @@ export function openMonthSetupModal(mk){
       </div>
     </div>
   </div>`;
+}
+
+export function msToggleEditMode(mk){
+  _msEditMode=!_msEditMode;
+  const btn=document.getElementById('btn-ms-edit-mode');
+  if(btn){btn.textContent=_msEditMode?'✓ סיום עריכה':'✏️ ערוך ימים';btn.className=_msEditMode?'btn btn-p btn-sm':'btn btn-s btn-sm';}
+  const[y,m]=mk.split('-').map(Number);
+  const inner=document.getElementById('ms-calendar-inner');
+  if(inner)inner.innerHTML=_renderMsCalendar(y,m,mk,_msOverrides,_msEditMode);
+}
+
+export function msToggleDay(date,mk){
+  const[y]=date.split('-').map(Number);
+  const autoType=getHolidays(y)[date]?.type; // 'holiday', 'eve', or undefined (=working)
+  const cur=_msOverrides[date]||(autoType||'work');
+  const next=cur==='work'?'eve':cur==='eve'?'holiday':'work';
+  // Remove override if result matches the auto value
+  if(next===autoType||(next==='work'&&!autoType)){delete _msOverrides[date];}
+  else{_msOverrides[date]=next;}
+  const[,m]=mk.split('-').map(Number);
+  const inner=document.getElementById('ms-calendar-inner');
+  if(inner)inner.innerHTML=_renderMsCalendar(y,m,mk,_msOverrides,_msEditMode);
+  const{full,half,off,effective}=_calcMsWorkDays(mk);
+  const legend=document.getElementById('ms-legend');
+  if(legend)legend.innerHTML=_legendHtml(full,half,off);
+  const desc=document.getElementById('ms-days-desc');
+  if(desc)desc.innerHTML=`חישוב אוטו: ${full} מלאים + ${half}×½ ערבי חג = <b>${effective}</b> ימים = <b>${Math.round(effective*7)}h</b>`;
 }
 
 export function updateVacPreview(inp,mk,overrideWorkDays){
@@ -845,11 +846,15 @@ export async function saveMonthSetup(mk){
   }
   state.currentMonth=mk;
 
-  await Promise.all([
-    api.put(`/api/months/${mk}`,{workDays:isNaN(days)?null:days,holidays:Object.entries(_msOverrides).map(([date,type])=>({date,type}))}),
-    ...vacOps,
-    ...newClientOps.filter(Boolean),
-  ]);
+  try {
+    await Promise.all([
+      api.put(`/api/months/${mk}`,{workDays:isNaN(days)?null:days,holidays:Object.entries(_msOverrides).map(([date,type])=>({date,type}))}),
+      ...vacOps,
+      ...newClientOps.filter(Boolean),
+    ]);
+  } catch {
+    return;
+  }
 
   initMonthSelect();closeModal();renderPage();
 }
