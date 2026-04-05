@@ -41,6 +41,8 @@ feature/*   ← anyone pushes freely
 
 **SQLite WAL files on server:** SQLite WAL mode creates `data.db-shm` and `data.db-wal` sidecar files when the process runs. These are excluded in `.gitignore` but exist on the server as untracked files. Both `deploy.sh` scripts include `rm -f data.db-shm data.db-wal` before `git pull` to prevent git merge conflicts.
 
+**Pre-deploy DB backup:** Both `deploy.sh` scripts run `cp data.db "data.db.bak.$(date +%Y%m%d%H%M%S)"` before `git pull`, keeping the 7 most recent backups. If a deploy corrupts the database, restore with `cp data.db.bak.<timestamp> data.db`.
+
 ## Architecture
 
 ### Frontend (`src/client/`)
@@ -53,8 +55,8 @@ Vanilla JS ES modules bundled by Vite. **No framework** — pages render by sett
 | `main.js` | Entry point: async `init()`, login page, `logout()`, registers renderers |
 | `router.js` | `navigate()`, `renderPage()`, `onMonthChange()`, mutable view state |
 | `state.js` | Singleton `state` object, `loadState()` (async, fetches from API), `saveState()` (no-op) |
-| `api.js` | Fetch wrapper: `api.get/post/put/patch/delete()`, auto-redirects to login on 401 |
-| `utils.js` | `closeModal()`, `mkLabel()`, `initMonthSelect()`, badge helpers |
+| `api.js` | Fetch wrapper: `api.get/post/put/patch/delete()`, auto-shows toast on errors, redirects to login on 401 via `setLoginHandler()` |
+| `utils.js` | `closeModal()`, `mkLabel()`, `initMonthSelect()`, `showToast(msg, type)`, `withLoading(btn, asyncFn)`, badge helpers |
 | `working-days.js` | `getEmpHours()`, `getClientHours()`, `calcMonthWorkDays()` |
 | `aggregations.js` | `getEmpAllocated()`, `getClientAllocated()`, `getEmpActiveClients()` |
 | `hebrew-calendar.js` | Hebrew holiday calculation (pure functions) |
@@ -92,6 +94,8 @@ window.saveClient = saveClient;
 **Circular dependency resolution:**
 - `router.js` exports `setRenderers()` — called by `main.js` with page render functions
 - `clients.js` uses dynamic `import()` for `openEmpModal` from `employees.js`
+- `api.js` exports `setLoginHandler(fn)` — called by `main.js` to register `showLogin`; avoids `window.__showLogin` hack
+- `api.js` imports `showToast` from `utils.js` (not circular — utils.js does not import api.js)
 
 ### Backend (`src/server/`)
 
@@ -100,10 +104,12 @@ Fastify 5 with plugin architecture. SQLite via better-sqlite3 (synchronous). Ses
 **Key files:**
 | File | Purpose |
 |------|---------|
-| `index.js` | Fastify setup, SQLiteStore for sessions, registers all plugins, serves static `dist/` |
+| `index.js` | Fastify setup, SQLiteStore for sessions, global error handler, session cleanup, registers all plugins, serves static `dist/` |
 | `db.js` | Opens SQLite, enables WAL + foreign keys, runs `schema.sql` on startup |
-| `schema.sql` | All table definitions (CREATE TABLE IF NOT EXISTS) |
+| `schema.sql` | All table definitions + 6 performance indexes (idx_sessions_expires, idx_alloc_month, etc.) |
 | `auth.js` | Login/logout/me endpoints, exports `requireAuth` and `requireAdmin` preHandlers |
+| `utils.js` | `buildHoursMap(rows, idField)`, `serializeClient()`, `serializeEmployee()` — shared between routes and export |
+| `validate.js` | Zod schemas + `validate(schema, data)` helper — throws 400 on invalid input; used by all mutation routes |
 
 **Route plugins** (`src/server/routes/`):
 | File | Endpoints |
@@ -242,6 +248,6 @@ All pages have been annotated with semantic IDs and classes. Use these when maki
 
 ### Settings (`pages/settings.js`)
 - Container: `#settings-page`, `#settings-months-card`, `#settings-months-tbl`, `#settings-export-card`, `#settings-account-card`
-- Buttons: `#btn-select-all-months`, `#btn-deselect-all-months`, `#btn-export-excel`, `#btn-logout`
+- Buttons: `#btn-select-all-months`, `#btn-deselect-all-months`, `#btn-export-excel`, `#btn-export-json`, `#btn-logout`
 - Rows: `.month-row[data-month]`; cells: `.month-name-cell`, `.month-actions-cell`
 - Button classes: `.btn-export-month`, `.btn-delete-month`

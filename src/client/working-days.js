@@ -13,14 +13,16 @@ export function getWorkingDays(mk){
 export function calcMonthWorkDays(mk){
   const[y,m]=mk.split('-').map(Number);
   const last=new Date(y,m,0).getDate();
+  const autoH=getHolidays(y);
+  const ovr=Object.fromEntries((state.monthSetup?.[mk]?.holidays||[]).map(h=>[h.date,h.type]));
   let full=0,half=0,off=0;
   for(let d=1;d<=last;d++){
     const dow=new Date(y,m-1,d).getDay();
     if(dow===5||dow===6)continue;
     const key=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const h=getHolidays(y)[key];
-    if(!h)full++;
-    else if(h.type==='eve')half++;
+    const type=ovr[key]||(autoH[key]?.type);
+    if(!type||type==='work')full++;
+    else if(type==='eve')half++;
     else off++;
   }
   return{full,half,off,effective:full+half*0.5};

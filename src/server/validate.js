@@ -60,15 +60,20 @@ export const EmployeeUpdateSchema = z.object({
   preferredClients: z.array(z.string()).optional().default([]),
 });
 
+const HolidayOverrideSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+  type: z.enum(['holiday', 'eve', 'work']),
+});
+
 export const MonthCreateSchema = z.object({
   monthKey: z.string().regex(monthKeyRe, 'monthKey must be YYYY-MM'),
   workDays: z.number().min(0).max(31).nullable().optional(),
-  holidays: z.array(z.any()).optional().default([]),
+  holidays: z.array(HolidayOverrideSchema).optional().default([]),
 });
 
 export const MonthUpdateSchema = z.object({
   workDays: z.number().min(0).max(31).nullable().optional(),
-  holidays: z.array(z.any()).optional().default([]),
+  holidays: z.array(HolidayOverrideSchema).optional().default([]),
 });
 
 export const VacationSchema = z.object({
