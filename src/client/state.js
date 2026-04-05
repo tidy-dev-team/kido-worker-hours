@@ -25,7 +25,7 @@ export async function loadState() {
   state.employees = employees.map(e => ({ ...e, hidden: !e.visible }));
   state.activeMonths = months.map(m => m.monthKey).sort();
   state.monthSetup = Object.fromEntries(
-    months.filter(m => m.workDays != null).map(m => [m.monthKey, { workDays: m.workDays }])
+    months.map(m => [m.monthKey, { workDays: m.workDays, holidays: m.holidays || [] }])
   );
 
   if (!state.currentMonth || !state.activeMonths.includes(state.currentMonth)) {
