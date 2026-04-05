@@ -450,36 +450,74 @@ export function openNewMonthModal(){
 
 let _vacIdx=0;
 let _ncIdx=0;
+let _msEditMode=false;
+let _msOverrides={}; // { "YYYY-MM-DD": "holiday"|"eve"|"work" }
 
-export function openMonthSetupModal(mk){
-  mk=mk||state.currentMonth;
-  _ncIdx=0;_vacIdx=0;
-  const ml=MONTHS.find(x=>x.key===mk)?.label||mk;
+function _legendHtml(full,half,off){
+  return `<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#f0fdf4;border-radius:2px;display:inline-block"></span> יום עבודה מלא (${full})</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#fef9c3;border-radius:2px;display:inline-block"></span> ערב חג – חצי יום (${half})</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#fee2e2;border-radius:2px;display:inline-block"></span> חג (${off})</span>`;
+}
+
+function _calcMsWorkDays(mk){
   const[y,m]=mk.split('-').map(Number);
   const last=new Date(y,m,0).getDate();
-  if(!state.monthSetup)state.monthSetup={};
-  if(!state.vacations)state.vacations={};
+  const autoH=getHolidays(y);
+  let full=0,half=0,off=0;
+  for(let d=1;d<=last;d++){
+    const dow=new Date(y,m-1,d).getDay();
+    if(dow===5||dow===6)continue;
+    const key=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const type=_msOverrides[key]||(autoH[key]?.type);
+    if(!type||type==='work')full++;
+    else if(type==='eve')half++;
+    else off++;
+  }
+  return{full,half,off,effective:full+half*0.5};
+}
 
+function _renderMsCalendar(y,m,mk,overrides,editMode){
   const DAY_NAMES=['א','ב','ג','ד','ה','ו','ש'];
+  const last=new Date(y,m,0).getDate();
   const firstDow=new Date(y,m-1,1).getDay();
+  const autoH=getHolidays(y);
   let cells=[];
   for(let i=0;i<firstDow;i++)cells.push('<td></td>');
   for(let d=1;d<=last;d++){
     const dow=new Date(y,m-1,d).getDay();
     const key=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const h=getHolidays(y)[key];
     const isWeekend=dow===5||dow===6;
-    let bg='',title='',label='';
+    const auto=autoH[key];
+    const type=overrides[key]||(auto?.type);
+    const name=auto?.name||'';
+    let bg='',title='',label='',extra='',click='';
     if(isWeekend){bg='background:#f1f5f9;color:#94a3b8';}
-    else if(h&&h.type==='holiday'){bg='background:#fee2e2;color:#b91c1c';title=h.name;label='<div style="font-size:8px;line-height:1;margin-top:1px">'+(h.name.length>6?h.name.slice(0,6)+'…':h.name)+'</div>';}
-    else if(h&&h.type==='eve'){bg='background:#fef9c3;color:#92400e';title=h.name;label='<div style="font-size:8px;line-height:1;margin-top:1px">½</div>';}
-    else{bg='background:#f0fdf4;color:#166534';}
-    cells.push('<td style="text-align:center;padding:4px 2px;border-radius:4px;'+bg+'" title="'+title+'"><div style="font-weight:600;font-size:13px">'+d+'</div>'+label+'</td>');
+    else if(!type||type==='work'){bg='background:#f0fdf4;color:#166534';}
+    else if(type==='eve'){bg='background:#fef9c3;color:#92400e';title=name;label='<div style="font-size:8px;line-height:1;margin-top:1px">½</div>';}
+    else{bg='background:#fee2e2;color:#b91c1c';title=name;label='<div style="font-size:8px;line-height:1;margin-top:1px">'+(name.length>6?name.slice(0,6)+'…':name)+'</div>';}
+    if(editMode&&!isWeekend){extra='cursor:pointer;outline:1px dashed rgba(0,0,0,.15);';click=`onclick="msToggleDay('${key}','${mk}')" `;}
+    cells.push(`<td ${click}style="text-align:center;padding:4px 2px;border-radius:4px;${bg}${extra}" title="${title}"><div style="font-weight:600;font-size:13px">${d}</div>${label}</td>`);
     if(dow===6&&d<last){cells.push('</tr><tr>');}
   }
-  const calRows=cells.join('');
+  return `<table style="width:100%;border-collapse:separate;border-spacing:2px">
+    <thead><tr>${DAY_NAMES.map(d=>'<th style="text-align:center;font-size:11px;color:var(--muted);padding:3px">'+d+'</th>').join('')}</tr></thead>
+    <tbody><tr>${cells.join('')}</tr></tbody>
+  </table>`;
+}
 
-  const {full,half,off,effective}=calcMonthWorkDays(mk);
+export function openMonthSetupModal(mk){
+  mk=mk||state.currentMonth;
+  _ncIdx=0;_vacIdx=0;
+  _msEditMode=false;
+  const ml=MONTHS.find(x=>x.key===mk)?.label||mk;
+  const[y,m]=mk.split('-').map(Number);
+  const last=new Date(y,m,0).getDate();
+  if(!state.monthSetup)state.monthSetup={};
+  if(!state.vacations)state.vacations={};
+  _msOverrides=Object.fromEntries((state.monthSetup[mk]?.holidays||[]).map(h=>[h.date,h.type]));
+
+  const calHtml=_renderMsCalendar(y,m,mk,_msOverrides,false);
+  const {full,half,off,effective}=_calcMsWorkDays(mk);
   const customDays=state.monthSetup[mk]?.workDays;
   const suggestedDays=customDays!==undefined?customDays:effective;
 
@@ -531,22 +569,19 @@ export function openMonthSetupModal(mk){
         </div>
 
         <div id="ms-calendar">
-          <div class="fl" style="margin-bottom:8px">לוח שנה</div>
-          <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:separate;border-spacing:2px">
-            <thead><tr>${DAY_NAMES.map(d=>'<th style="text-align:center;font-size:11px;color:var(--muted);padding:3px">'+d+'</th>').join('')}</tr></thead>
-            <tbody><tr>${calRows}</tr></tbody>
-          </table></div>
-          <div style="display:flex;gap:12px;margin-top:8px;font-size:12px;flex-wrap:wrap">
-            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#f0fdf4;border-radius:2px;display:inline-block"></span> יום עבודה מלא (${full})</span>
-            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#fef9c3;border-radius:2px;display:inline-block"></span> ערב חג – חצי יום (${half})</span>
-            <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#fee2e2;border-radius:2px;display:inline-block"></span> חג (${off})</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="fl" style="margin:0">לוח שנה</div>
+            <button id="btn-ms-edit-mode" onclick="msToggleEditMode('${mk}')" class="btn btn-s btn-sm">✏️ ערוך ימים</button>
+          </div>
+          <div style="overflow-x:auto"><div id="ms-calendar-inner">${calHtml}</div></div>
+          <div id="ms-legend" style="display:flex;gap:12px;margin-top:8px;font-size:12px;flex-wrap:wrap">
+            ${_legendHtml(full,half,off)}
           </div>
         </div>
 
         <div id="ms-workdays">
           <label class="fl">ימי עבודה אפקטיביים בחודש</label>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">חישוב אוטו: ${full} מלאים + ${half}×½ ערבי חג = <b>${effective}</b> ימים = <b>${Math.round(effective*7)}h</b></div>
+          <div id="ms-days-desc" style="font-size:12px;color:var(--muted);margin-bottom:6px">חישוב אוטו: ${full} מלאים + ${half}×½ ערבי חג = <b>${effective}</b> ימים = <b>${Math.round(effective*7)}h</b></div>
           <div style="display:flex;align-items:center;gap:10px">
             <input type="number" id="ms-days" class="fi" style="width:90px" min="0" max="31" step="0.5" value="${suggestedDays}" oninput="onMsDaysChange(this.value,'${mk}')">
             <span style="font-size:13px;color:var(--muted)">ימים = <b id="ms-hours-preview">${Math.round(suggestedDays*7)}h</b> לעובד</span>
@@ -583,6 +618,33 @@ export function openMonthSetupModal(mk){
       </div>
     </div>
   </div>`;
+}
+
+export function msToggleEditMode(mk){
+  _msEditMode=!_msEditMode;
+  const btn=document.getElementById('btn-ms-edit-mode');
+  if(btn){btn.textContent=_msEditMode?'✓ סיום עריכה':'✏️ ערוך ימים';btn.className=_msEditMode?'btn btn-p btn-sm':'btn btn-s btn-sm';}
+  const[y,m]=mk.split('-').map(Number);
+  const inner=document.getElementById('ms-calendar-inner');
+  if(inner)inner.innerHTML=_renderMsCalendar(y,m,mk,_msOverrides,_msEditMode);
+}
+
+export function msToggleDay(date,mk){
+  const[y]=date.split('-').map(Number);
+  const autoType=getHolidays(y)[date]?.type; // 'holiday', 'eve', or undefined (=working)
+  const cur=_msOverrides[date]||(autoType||'work');
+  const next=cur==='work'?'eve':cur==='eve'?'holiday':'work';
+  // Remove override if result matches the auto value
+  if(next===autoType||(next==='work'&&!autoType)){delete _msOverrides[date];}
+  else{_msOverrides[date]=next;}
+  const[,m]=mk.split('-').map(Number);
+  const inner=document.getElementById('ms-calendar-inner');
+  if(inner)inner.innerHTML=_renderMsCalendar(y,m,mk,_msOverrides,_msEditMode);
+  const{full,half,off,effective}=_calcMsWorkDays(mk);
+  const legend=document.getElementById('ms-legend');
+  if(legend)legend.innerHTML=_legendHtml(full,half,off);
+  const desc=document.getElementById('ms-days-desc');
+  if(desc)desc.innerHTML=`חישוב אוטו: ${full} מלאים + ${half}×½ ערבי חג = <b>${effective}</b> ימים = <b>${Math.round(effective*7)}h</b>`;
 }
 
 export function updateVacPreview(inp,mk,overrideWorkDays){
@@ -791,7 +853,7 @@ export async function saveMonthSetup(mk){
 
   try {
     await Promise.all([
-      api.put(`/api/months/${mk}`,{workDays:isNaN(days)?null:days,holidays:[]}),
+      api.put(`/api/months/${mk}`,{workDays:isNaN(days)?null:days,holidays:Object.entries(_msOverrides).map(([date,type])=>({date,type}))}),
       ...vacOps,
       ...newClientOps.filter(Boolean),
     ]);
