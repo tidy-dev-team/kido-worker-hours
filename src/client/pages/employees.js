@@ -227,7 +227,7 @@ export function sendAllocation(eid){
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><polyline points="1,3.5 7,8.5 13,3.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
             שלח במייל${hasEmail?' → '+e.email:' (לא הוגדר אימייל)'}
           </button>
-          <button class="btn btn-p" style="background:#4a154b" ${hasSlack?'':'disabled title="לא הוגדר Slack Webhook"'}
+          <button class="btn btn-p" style="background:#4a154b" ${hasSlack?'':'disabled title="לא הוגדר Slack User ID"'}
             onclick="sendSlackMsg('${eid}',getEditedMsg('${eid}'),this)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
             שלח ב-Slack${hasSlack?'':' (לא הוגדר Webhook)'}
@@ -246,18 +246,13 @@ export function sendAllocation(eid){
 export async function sendSlackMsg(eid,msg,btn){
   const e=state.employees.find(x=>x.id===eid);
   if(!e?.slackWebhook)return;
+  const slackIcon='<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   if(btn){btn.disabled=true;btn.textContent='שולח...';}
   try{
-    const r=await fetch(e.slackWebhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:msg})});
-    if(r.ok||r.type==='opaque'){
-      if(btn){btn.textContent='✓ נשלח';btn.style.background='var(--success)';}
-    }else{
-      if(btn){btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח ב-Slack';}
-      alert('שגיאה בשליחה ל-Slack: '+r.status);
-    }
+    await api.post(`/api/notify/slack/${eid}`,{message:msg});
+    if(btn){btn.textContent='✓ נשלח';btn.style.background='var(--success)';}
   }catch(err){
-    if(btn){btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> שלח ב-Slack';}
-    navigator.clipboard.writeText(msg).then(()=>alert('לא ניתן לשלוח ישירות (CORS).\nההודעה הועתקת ללוח — הדבק ב-Slack ידנית.'));
+    if(btn){btn.disabled=false;btn.innerHTML=slackIcon+' שלח ב-Slack';}
   }
 }
 
@@ -273,7 +268,7 @@ export function sendAllAllocations(){
         onclick="window.open('mailto:${e.email||''}?subject=הקצאת שעות ${ml}&body='+encodeURIComponent(buildAllocationMsg(state.employees.find(x=>x.id==='${e.id}'),state.currentMonth)));this.innerHTML='<svg width=&quot;12&quot; height=&quot;12&quot; viewBox=&quot;0 0 12 12&quot; fill=&quot;none&quot;><path d=&quot;M2 6l3 3 5-5&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.5&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/></svg>';this.style.color='var(--success)'">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><polyline points="1,3.5 7,8.5 13,3.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>${hasEmail?'':' —'}
       </button>
-      <button id="sa-slack-${e.id}" class="btn btn-s btn-sm" style="${hasSlack?'background:#4a154b;color:#fff':''}" ${hasSlack?'':'disabled'} title="${hasSlack?'Slack Webhook':'לא הוגדר Webhook'}"
+      <button id="sa-slack-${e.id}" class="btn btn-s btn-sm" style="${hasSlack?'background:#4a154b;color:#fff':''}" ${hasSlack?'':'disabled'} title="${hasSlack?'שלח ב-Slack':'לא הוגדר Slack User ID'}"
         onclick="sendSlackMsg('${e.id}',buildAllocationMsg(state.employees.find(x=>x.id==='${e.id}'),state.currentMonth),this)">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 10l1.5-3.5L2 3h10l-1.5 3.5L12 10H7.5L5 12.5V10H2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>${hasSlack?'':' —'}
       </button>
@@ -345,9 +340,9 @@ export function openEmpModal(eid=null){
         <div class="frow">
           <div class="fg"><label class="fl">אימייל</label>
             <input type="email" class="fi" id="e-email" value="${e?.email||''}" placeholder="email@example.com"></div>
-          <div class="fg"><label class="fl">Slack Webhook URL</label>
-            <input type="url" class="fi" id="e-slack" value="${e?.slackWebhook||''}" placeholder="https://hooks.slack.com/...">
-            <div class="fhint">Incoming Webhook URL לשליחת הקצאה ישירות לסלאק</div></div>
+          <div class="fg"><label class="fl">Slack User ID</label>
+            <input type="text" class="fi" id="e-slack" value="${e?.slackWebhook||''}" placeholder="U0123ABCD">
+            <div class="fhint">מזהה משתמש בסלאק (פרופיל → ⋯ → Copy member ID)</div></div>
         </div>
         <div class="fg">
           <label class="fl">אחוזי משרה</label>
