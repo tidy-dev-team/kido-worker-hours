@@ -17,8 +17,8 @@ export function renderOverview(){
   const visClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
 
   // ── Totals ──
-  const totalC=state.clients.filter(c=>c.active!==false).reduce((s,c)=>s+(getClientHours(c,mk)||0),0);
-  const totalCap=activeEmps.reduce((s,e)=>s+getEmpHours(e,mk),0);
+  const totalC=state.clients.filter(c=>c.active!==false&&c.type!=='internal').reduce((s,c)=>s+(getClientHours(c,mk)||0),0);
+  const totalCap=activeEmps.reduce((s,e)=>s+Math.round(getEmpHours(e,mk)),0);
   const totalAlloc=getTotalAllocated(mk);
   const utilPct=totalCap>0?Math.round(totalAlloc/totalCap*100):0;
   const gap=totalCap-totalC;
