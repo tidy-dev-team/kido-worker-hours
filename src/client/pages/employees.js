@@ -370,7 +370,7 @@ export function openEmpModal(eid=null){
             </button>
           </div>
           <div class="pref-grid" id="emp-client-pref-grid">
-            ${state.clients.map(c=>`
+            ${state.clients.filter(c=>c.active!==false&&c.type!=='internal').map(c=>`
               <label class="pref-item pref-item-client" data-client-id="${c.id}">
                 <input type="checkbox" data-pref="${c.id}" ${(e?.preferredClients||[]).includes(c.id)?'checked':''}>
                 <span style="flex:1">${c.name}</span>
