@@ -11,7 +11,7 @@ import { renderClients, updateClientHours, deleteClient, toggleClientActive, ope
 import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHours, updateEmpVacDays, resetEmpHours, deleteEmployee, sendAllocation, sendSlackMsg, sendAllAllocations, sendAllEmails, sendAllSlack, openEmpModal, updateScopePreview, saveEmployee, openClientModalFromEmp, openNewMonthModal, openMonthSetupModal, updateVacPreview, onMsDaysChange, addVacRow, activateVacRow, removeVacRow, addNewClientForm, removeClientForm, toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay } from './pages/employees.js';
 import { renderMatrix, onMatrixInput, onMatrixChange, copyAllocations, resetMonth } from './pages/matrix.js';
 import { autoDistribute } from './pages/auto-distribute.js';
-import { renderWeeklySchedule, clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient, wsEditEmpPrefs } from './pages/weekly-schedule.js';
+import { renderWeeklySchedule, clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient } from './pages/weekly-schedule.js';
 import { renderSettings, deleteMonth, exportMonthsToExcel, exportToJSON } from './pages/settings.js';
 
 // Register renderers (breaks circular dep: router can't import pages)
@@ -31,7 +31,7 @@ Object.assign(window, {
   addVacRow, activateVacRow, removeVacRow, addNewClientForm, removeClientForm,
   toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay,
   onMatrixInput, onMatrixChange, copyAllocations, resetMonth, autoDistribute,
-  clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient, wsEditEmpPrefs,
+  clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient,
   deleteMonth, exportMonthsToExcel, exportToJSON,
   renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView,
   logout,

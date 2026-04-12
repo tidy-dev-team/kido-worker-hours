@@ -90,8 +90,7 @@ export function wsShowPopover(mk,eid,day,cellEl){
   wsHidePopover();
   const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
   const emp=state.employees.find(function(e){return e.id===eid;});
-  const prefCids=(emp&&emp.preferredClients&&emp.preferredClients.length)?emp.preferredClients:activeClients.map(function(c){return c.id;});
-  const clientsToShow=activeClients.filter(function(c){return prefCids.includes(c.id);});
+  const clientsToShow=activeClients;
   if(!clientsToShow.length)return;
   if(!state.weeklySchedule[mk])state.weeklySchedule[mk]={};
   if(!state.weeklySchedule[mk][eid]){
@@ -109,7 +108,7 @@ export function wsShowPopover(mk,eid,day,cellEl){
   const div=document.createElement('div');
   div.id='ws-popover';
   div.style.cssText='position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--primary);border-radius:var(--r);padding:6px 4px;box-shadow:0 6px 24px rgba(0,0,0,0.18);min-width:160px;max-height:300px;overflow-y:auto';
-  div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--muted);padding:2px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:4px"><span>לקוחות של '+((emp&&emp.name)||'')+'</span><button onclick="wsEditEmpPrefs(\''+eid+'\')" style="background:none;border:none;cursor:pointer;color:var(--primary);padding:2px;display:flex;align-items:center" title="ערוך לקוחות קבועים"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.41 1.41 0 0 1 2 2L3.5 10.5l-3 .5.5-3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button></div>'+clientsToShow.map(function(c){return'<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'"><input type="checkbox" '+(current.has(c.id)?'checked ':'')+'onchange="wsToggleClient(\''+mk+'\',\''+eid+'\','+day+',\''+c.id+'\',this.checked)" style="cursor:pointer;accent-color:var(--primary)">'+c.name+'</label>';}).join('');
+  div.innerHTML='<div style="font-size:10px;color:var(--muted);padding:2px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:4px">לקוחות של '+((emp&&emp.name)||'')+'</div>'+clientsToShow.map(function(c){return'<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'"><input type="checkbox" '+(current.has(c.id)?'checked ':'')+'onchange="wsToggleClient(\''+mk+'\',\''+eid+'\','+day+',\''+c.id+'\',this.checked)" style="cursor:pointer;accent-color:var(--primary)">'+c.name+'</label>';}).join('');
   document.body.appendChild(div);
   const rect=cellEl.getBoundingClientRect();
   const top=rect.bottom+4;
@@ -125,10 +124,6 @@ function wsHidePopover(){
   const pop=document.getElementById('ws-popover');
   if(pop)pop.remove();
   document.removeEventListener('click',wsHandleOutsideClick,true);
-}
-export function wsEditEmpPrefs(eid){
-  wsHidePopover();
-  import('./employees.js').then(mod=>mod.openEmpModal(eid));
 }
 export function wsToggleClient(mk,eid,day,cid,checked){
   if(!state.weeklySchedule[mk])state.weeklySchedule[mk]={};
@@ -150,8 +145,8 @@ function wsUpdateCellDisplay(mk,eid,day){
   const [,moS]=mk.split('-');const mo=parseInt(moS);
   const yr=parseInt(mk.split('-')[0]);
   const dow=new Date(yr,mo-1,parseInt(day)).getDay();
-  cellEl.style.outline=hasManual?'2px solid #f59e0b':'';
-  cellEl.style.outlineOffset=hasManual?'-2px':'';
+  cellEl.style.outline='';
+  cellEl.style.outlineOffset='';
   if(!clients.length){cellEl.innerHTML='<span style="color:var(--border);font-size:10px">—</span>';return;}
   cellEl.innerHTML='<div style="display:flex;flex-direction:column;gap:2px">'+clients.map(function(a){const wda=a.client.weeklyDay!=null?(Array.isArray(a.client.weeklyDay)?a.client.weeklyDay:[a.client.weeklyDay]):[];const isWD=wda.includes(dow);const short=a.client.name.length>12?a.client.name.slice(0,12)+'…':a.client.name;return'<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-size:10px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+a.client.name+(isWD?' ★':'')+'">'+short+(isWD?' ★':'')+'</div>';}).join('')+'</div>';
 }
@@ -214,7 +209,7 @@ export function renderWeeklySchedule(){
     const cells=week.map(function(wd){
       const clients=dayMap[wd.d]||[];
       const hasManual=normWS(state.weeklySchedule[mk]?.[emp.id]?.[wd.d]).length>0;
-      const manualOutline=hasManual?'outline:2px solid #f59e0b;outline-offset:-2px;':'';
+      const manualOutline='';
       let inner;
       if(!clients.length){
         inner='<span style="color:var(--border);font-size:11px;user-select:none">—</span>';
