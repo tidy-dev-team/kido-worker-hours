@@ -150,8 +150,8 @@ function wsUpdateCellDisplay(mk,eid,day){
   const [,moS]=mk.split('-');const mo=parseInt(moS);
   const yr=parseInt(mk.split('-')[0]);
   const dow=new Date(yr,mo-1,parseInt(day)).getDay();
-  cellEl.style.outline=hasManual?'2px solid #f59e0b':'';
-  cellEl.style.outlineOffset=hasManual?'-2px':'';
+  cellEl.style.outline='';
+  cellEl.style.outlineOffset='';
   if(!clients.length){cellEl.innerHTML='<span style="color:var(--border);font-size:10px">—</span>';return;}
   cellEl.innerHTML='<div style="display:flex;flex-direction:column;gap:2px">'+clients.map(function(a){const wda=a.client.weeklyDay!=null?(Array.isArray(a.client.weeklyDay)?a.client.weeklyDay:[a.client.weeklyDay]):[];const isWD=wda.includes(dow);const short=a.client.name.length>12?a.client.name.slice(0,12)+'…':a.client.name;return'<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-size:10px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+a.client.name+(isWD?' ★':'')+'">'+short+(isWD?' ★':'')+'</div>';}).join('')+'</div>';
 }
@@ -214,7 +214,7 @@ export function renderWeeklySchedule(){
     const cells=week.map(function(wd){
       const clients=dayMap[wd.d]||[];
       const hasManual=normWS(state.weeklySchedule[mk]?.[emp.id]?.[wd.d]).length>0;
-      const manualOutline=hasManual?'outline:2px solid #f59e0b;outline-offset:-2px;':'';
+      const manualOutline='';
       let inner;
       if(!clients.length){
         inner='<span style="color:var(--border);font-size:11px;user-select:none">—</span>';
