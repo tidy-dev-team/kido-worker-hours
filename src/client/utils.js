@@ -1,22 +1,19 @@
-import { MONTHS, MONTH_NAMES_HE } from './constants.js';
 import { state } from './state.js';
+import { t, monthLabel } from './i18n.js';
 
 export function clientTypeBadge(type){
-  if(type==='retainer')return'<span class="badge b-ret">ריטיינר</span>';
-  if(type==='project')return'<span class="badge b-proj">פרויקט</span>';
-  return'<span class="badge b-int">פנימי</span>';
+  if(type==='retainer')return`<span class="badge b-ret">${t('clientType.retainer')}</span>`;
+  if(type==='project')return`<span class="badge b-proj">${t('clientType.project')}</span>`;
+  return`<span class="badge b-int">${t('clientType.internal')}</span>`;
 }
 export function clientTypeLabel(type){
-  if(type==='retainer')return'ריטיינר';
-  if(type==='project')return'פרויקט';
-  return'פנימי';
+  if(type==='retainer')return t('clientType.retainer');
+  if(type==='project')return t('clientType.project');
+  return t('clientType.internal');
 }
 
 export function mkLabel(mk){
-  const mo=MONTHS.find(x=>x.key===mk);
-  if(mo)return mo.label;
-  const[y,m]=mk.split('-').map(Number);
-  return `${MONTH_NAMES_HE[m-1]} ${y}`;
+  return monthLabel(mk);
 }
 export function mkKey(y,m){return `${y}-${String(m).padStart(2,'0')}`;}
 
@@ -54,7 +51,6 @@ export function initMonthSelect(){
   const sel=document.getElementById('month-select');
   sel.innerHTML='';
   (state.activeMonths||[state.currentMonth]).slice().sort().forEach(mk=>{
-    const mo=MONTHS.find(x=>x.key===mk);
     const o=document.createElement('option');
     o.value=mk;o.textContent=mkLabel(mk);
     if(mk===state.currentMonth)o.selected=true;
