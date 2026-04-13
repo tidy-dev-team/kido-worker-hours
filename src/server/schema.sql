@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL DEFAULT 'member',
   invite_token TEXT,
   invite_expires_at TEXT,
+  preferred_language TEXT NOT NULL DEFAULT 'he',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
