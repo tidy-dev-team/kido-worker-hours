@@ -110,16 +110,12 @@ export function renderMatrix(){
     const utilCol=utilPct>=90?'var(--danger)':utilPct>=70?'var(--success)':'var(--warning)';
     const gapCol=gap<0?'var(--danger)':gap===0?'var(--success)':'var(--muted)';
     const clientCol=totalAlloc>=totalCont&&totalCont>0?'var(--success)':totalCont===0?'var(--muted)':'var(--warning)';
-    const kpiCard=(label,val,sub,col)=>`<div style="flex:1;min-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${label}</div>
-      <div style="font-size:22px;font-weight:700;color:${col};font-family:var(--font-mono,monospace)">${val}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:2px">${sub}</div>
-    </div>`;
-    const kpiBar=`<div id="matrix-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-      ${kpiCard(t('kpi.clientHours'),totalCont+'h',t('kpi.contractedThisMonth'),clientCol)}
-      ${kpiCard(t('kpi.empCapacity'),totalCap+'h',visEmps.length+' '+t('kpi.activeEmployees'),'var(--primary)')}
-      ${kpiCard(t('kpi.utilization'),utilPct+'%',totalAlloc+'h '+t('kpi.allocated'),utilCol)}
-      ${kpiCard(t('kpi.capacityGap'),(gap>=0?'+':'')+gap+'h',gap>=0?t('kpi.surplus'):t('kpi.shortage'),gapCol)}
+    const kpiCard=(accentCls,label,val,sub,valStyle='')=>`<div class="kpi ${accentCls}"><div class="kpi-accent"></div><div class="kpi-lbl">${label}</div><div class="kpi-val" style="${valStyle}">${val}</div><div class="kpi-sub">${sub}</div></div>`;
+    const kpiBar=`<div id="matrix-kpis" class="kpi-grid" style="margin-bottom:14px">
+      ${kpiCard('p',t('kpi.clientHours'),totalCont.toLocaleString(),t('kpi.contractedThisMonth'),`color:${clientCol}`)}
+      ${kpiCard('s',t('kpi.empCapacity'),totalCap.toLocaleString(),visEmps.length+' '+t('kpi.activeEmployees'))}
+      ${kpiCard(utilPct>100?'d':utilPct>=70?'s':'w',t('kpi.utilization'),utilPct+'%',totalAlloc+'h '+t('kpi.allocated'),`color:${utilCol}`)}
+      ${kpiCard(gap<0?'d':'w',t('kpi.capacityGap'),(gap>=0?'+':'')+gap,gap>=0?t('kpi.surplus'):t('kpi.shortage'),`color:${gapCol}`)}
     </div>`;
     return kpiBar+`<div id="matrix-toolbar" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
       <span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">${t('matrix.actions')}</span>
