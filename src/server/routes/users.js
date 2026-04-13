@@ -2,10 +2,18 @@
 import bcrypt from 'bcrypt';
 import { nanoid } from 'nanoid';
 import db from '../db.js';
-import { requireAdmin } from '../auth.js';
+import { requireAuth, requireAdmin } from '../auth.js';
 import { validate, InviteSchema, AcceptInviteSchema } from '../validate.js';
 
 async function usersRoutes(fastify) {
+  // PUT /api/users/me/language — update language preference
+  fastify.put('/api/users/me/language', { preHandler: requireAuth }, async (req) => {
+    const lang = req.body?.language;
+    if (lang !== 'he' && lang !== 'en') return { error: 'Invalid language' };
+    db.prepare('UPDATE users SET preferred_language=? WHERE id=?').run(lang, req.user.id);
+    return { ok: true };
+  });
+
   // GET /api/users — admin only
   fastify.get('/api/users', { preHandler: requireAdmin }, async () => {
     return db.prepare('SELECT id, email, name, role, created_at FROM users ORDER BY created_at').all();

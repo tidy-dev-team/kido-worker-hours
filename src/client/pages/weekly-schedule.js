@@ -1,10 +1,11 @@
 import { state } from '../state.js';
 import { api } from '../api.js';
+import { t } from '../i18n.js';
 import { getEmpHours } from '../working-days.js';
 import { mkLabel } from '../utils.js';
 import { _weeklyWeekIdx, setWeeklyWeekIdx, renderPage } from '../router.js';
 
-const _wdName={0:'א׳',1:'ב׳',2:'ג׳',3:'ד׳',4:'ה׳'};
+function _wdName(d){return t('day.'+d);}
 
 function normWS(val){if(!val)return[];return Array.isArray(val)?val:[val];}
 
@@ -53,7 +54,7 @@ function buildAutoMapMulti(allocs,allWorkDays){
 }
 
 export function clearWeeklySchedule(mk){
-  if(!confirm('לנקות את הסידור השבועי לחודש זה?'))return;
+  if(!confirm(t('weekly.clearConfirm')))return;
   const allWorkDays=_buildMonthWorkDays(mk);
   const emps=state.employees.filter(e=>e.visible!==false);
   state.weeklySchedule[mk]={};
@@ -90,26 +91,30 @@ export function wsShowPopover(mk,eid,day,cellEl){
   wsHidePopover();
   const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
   const emp=state.employees.find(function(e){return e.id===eid;});
-  const prefCids=(emp&&emp.preferredClients&&emp.preferredClients.length)?emp.preferredClients:activeClients.map(function(c){return c.id;});
-  const clientsToShow=activeClients.filter(function(c){return prefCids.includes(c.id);});
-  if(!clientsToShow.length)return;
+  if(!activeClients.length)return;
   if(!state.weeklySchedule[mk])state.weeklySchedule[mk]={};
+  // Build auto-map for this employee (used both for init and for current-state fallback)
+  const monthAlloc=state.matrix[mk]?.[eid]||{};
+  const empAllocs=Object.entries(monthAlloc)
+    .map(function(e){return{cid:e[0],h:parseFloat(e[1])||0,client:activeClients.find(function(c){return c.id===e[0];})};})
+    .filter(function(x){return x.h>0&&x.client;}).sort(function(a,b){return b.h-a.h;});
+  const allWorkDays=_buildMonthWorkDays(mk);
+  const autoMap=buildAutoMapMulti(empAllocs,allWorkDays);
+
   if(!state.weeklySchedule[mk][eid]){
-    const monthAlloc=state.matrix[mk]?.[eid]||{};
-    const allocs=Object.entries(monthAlloc)
-      .map(function(e){return{cid:e[0],h:parseFloat(e[1])||0,client:activeClients.find(function(c){return c.id===e[0];})};})
-      .filter(function(x){return x.h>0&&x.client;}).sort(function(a,b){return b.h-a.h;});
-    const aw=_buildMonthWorkDays(mk);
-    const am=buildAutoMapMulti(allocs,aw);
     state.weeklySchedule[mk][eid]={};
-    Object.entries(am).forEach(function(e){if(e[1].length)state.weeklySchedule[mk][eid][e[0]]=e[1].map(function(x){return x.cid;});});
+    Object.entries(autoMap).forEach(function(e){if(e[1].length)state.weeklySchedule[mk][eid][e[0]]=e[1].map(function(x){return x.cid;});});
     api.put(`/api/weekly/${mk}`,state.weeklySchedule[mk]);
   }
-  const current=new Set(normWS(state.weeklySchedule[mk][eid][day]));
+
+  // Use saved state for this day if it exists, otherwise fall back to auto-map
+  const savedDay=state.weeklySchedule[mk][eid][day];
+  const currentCids=savedDay!==undefined?normWS(savedDay):(autoMap[day]||[]).map(function(x){return x.cid;});
+  const current=new Set(currentCids);
   const div=document.createElement('div');
   div.id='ws-popover';
   div.style.cssText='position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--primary);border-radius:var(--r);padding:6px 4px;box-shadow:0 6px 24px rgba(0,0,0,0.18);min-width:160px;max-height:300px;overflow-y:auto';
-  div.innerHTML='<div style="font-size:10px;color:var(--muted);padding:2px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:4px">לקוחות של '+((emp&&emp.name)||'')+'</div>'+clientsToShow.map(function(c){return'<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'"><input type="checkbox" '+(current.has(c.id)?'checked':'')+'onchange="wsToggleClient(\''+mk+'\',\''+eid+'\','+day+',\''+c.id+'\',this.checked)" style="cursor:pointer;accent-color:var(--primary)">'+c.name+'</label>';}).join('');
+  div.innerHTML='<div style="font-size:10px;color:var(--muted);padding:2px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:4px">'+t('weekly.clientsOf')+' '+((emp&&emp.name)||'')+'</div>'+activeClients.map(function(c){return'<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer;border-radius:3px;font-size:12px" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'"><input type="checkbox" '+(current.has(c.id)?'checked':'')+'onchange="wsToggleClient(\''+mk+'\',\''+eid+'\','+day+',\''+c.id+'\',this.checked)" style="cursor:pointer;accent-color:var(--primary)">'+c.name+'</label>';}).join('');
   document.body.appendChild(div);
   const rect=cellEl.getBoundingClientRect();
   const top=rect.bottom+4;
@@ -129,6 +134,17 @@ function wsHidePopover(){
 export function wsToggleClient(mk,eid,day,cid,checked){
   if(!state.weeklySchedule[mk])state.weeklySchedule[mk]={};
   if(!state.weeklySchedule[mk][eid])state.weeklySchedule[mk][eid]={};
+  // If this day hasn't been explicitly saved yet, seed it from the auto-map first
+  if(state.weeklySchedule[mk][eid][day]===undefined){
+    const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
+    const monthAlloc=state.matrix[mk]?.[eid]||{};
+    const empAllocs=Object.entries(monthAlloc)
+      .map(function(e){return{cid:e[0],h:parseFloat(e[1])||0,client:activeClients.find(function(c){return c.id===e[0];})};})
+      .filter(function(x){return x.h>0&&x.client;}).sort(function(a,b){return b.h-a.h;});
+    const autoMap=buildAutoMapMulti(empAllocs,_buildMonthWorkDays(mk));
+    const autoCids=(autoMap[day]||[]).map(function(x){return x.cid;});
+    if(autoCids.length)state.weeklySchedule[mk][eid][day]=autoCids;
+  }
   const current=normWS(state.weeklySchedule[mk][eid][day]);
   const newCids=checked?[...current.filter(function(c){return c!==cid;}),cid]:current.filter(function(c){return c!==cid;});
   if(!newCids.length)delete state.weeklySchedule[mk][eid][day];
@@ -142,12 +158,11 @@ function wsUpdateCellDisplay(mk,eid,day){
   const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
   const cids=normWS(state.weeklySchedule[mk]?.[eid]?.[day]);
   const clients=cids.map(function(cid){return{cid,client:activeClients.find(function(c){return c.id===cid;})};}).filter(function(x){return x.client;});
-  const hasManual=normWS(state.weeklySchedule[mk]?.[eid]?.[day]).length>0;
   const [,moS]=mk.split('-');const mo=parseInt(moS);
   const yr=parseInt(mk.split('-')[0]);
   const dow=new Date(yr,mo-1,parseInt(day)).getDay();
-  cellEl.style.outline=hasManual?'2px solid #f59e0b':'';
-  cellEl.style.outlineOffset=hasManual?'-2px':'';
+  cellEl.style.outline='';
+  cellEl.style.outlineOffset='';
   if(!clients.length){cellEl.innerHTML='<span style="color:var(--border);font-size:10px">—</span>';return;}
   cellEl.innerHTML='<div style="display:flex;flex-direction:column;gap:2px">'+clients.map(function(a){const wda=a.client.weeklyDay!=null?(Array.isArray(a.client.weeklyDay)?a.client.weeklyDay:[a.client.weeklyDay]):[];const isWD=wda.includes(dow);const short=a.client.name.length>12?a.client.name.slice(0,12)+'…':a.client.name;return'<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:2px 5px;font-size:10px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+a.client.name+(isWD?' ★':'')+'">'+short+(isWD?' ★':'')+'</div>';}).join('')+'</div>';
 }
@@ -160,7 +175,7 @@ export function renderWeeklySchedule(){
 
   const activeClients=state.clients.filter(c=>c.active!==false&&c.type!=='internal');
   const emps=state.employees.filter(e=>e.visible!==false);
-  if(!emps.length) return '<div class="page-hd"><div class="page-title">סידור שבועי</div></div><div style="text-align:center;padding:60px;color:var(--muted)">אין עובדים פעילים</div>';
+  if(!emps.length) return `<div class="page-hd"><div class="page-title">${t('weekly.title')}</div></div><div style="text-align:center;padding:60px;color:var(--muted)">${t('weekly.noActiveEmps')}</div>`;
 
   const weeks=[];let cur=[];
   for(let i=0;i<allWorkDays.length;i++){
@@ -196,11 +211,11 @@ export function renderWeeklySchedule(){
   const tabs=weeks.map(function(w,i){
     const first=w[0],last=w[w.length-1];
     const active=i===weekIdx;
-    return '<button class="btn btn-sm '+(active?'btn-p':'btn-s')+'" onclick="setWeeklyWeekIdx('+i+');renderPage()" style="'+(active?'':'opacity:0.7')+'">שבוע '+(i+1)+' <span style="font-size:10px;opacity:0.8">('+first.d+'/'+mo+'–'+last.d+'/'+mo+')</span></button>';
+    return '<button class="btn btn-sm '+(active?'btn-p':'btn-s')+'" onclick="setWeeklyWeekIdx('+i+');renderPage()" style="'+(active?'':'opacity:0.7')+'">'+t('weekly.week')+' '+(i+1)+' <span style="font-size:10px;opacity:0.8">('+first.d+'/'+mo+'–'+last.d+'/'+mo+')</span></button>';
   }).join('');
 
   const colHeaders=week.map(function(wd){
-    return '<th style="padding:8px 12px;text-align:center;background:var(--surface-2);border:1px solid var(--border);min-width:120px;white-space:nowrap"><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+_wdName[wd.dow]+'</div><div style="font-size:14px;font-weight:700;color:var(--text)">'+wd.d+'/'+mo+'</div></th>';
+    return '<th style="padding:8px 12px;text-align:center;background:var(--surface-2);border:1px solid var(--border);min-width:120px;white-space:nowrap"><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+_wdName(wd.dow)+'</div><div style="font-size:14px;font-weight:700;color:var(--text)">'+wd.d+'/'+mo+'</div></th>';
   }).join('');
 
   const rows=empData.map(function(ed){
@@ -209,8 +224,7 @@ export function renderWeeklySchedule(){
     const pctCol=totalH>availH?'var(--danger)':pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--muted)';
     const cells=week.map(function(wd){
       const clients=dayMap[wd.d]||[];
-      const hasManual=normWS(state.weeklySchedule[mk]?.[emp.id]?.[wd.d]).length>0;
-      const manualOutline=hasManual?'outline:2px solid #f59e0b;outline-offset:-2px;':'';
+      const manualOutline='';
       let inner;
       if(!clients.length){
         inner='<span style="color:var(--border);font-size:11px;user-select:none">—</span>';
@@ -224,35 +238,35 @@ export function renderWeeklySchedule(){
       }
       return '<td id="wc-'+emp.id+'-'+wd.d+'" onclick="wsShowPopover(\''+mk+'\',\''+emp.id+'\','+wd.d+',this)" style="padding:6px 8px;border:1px solid var(--border);vertical-align:top;min-width:120px;cursor:pointer;transition:background 0.1s;'+manualOutline+'" onmouseover="this.style.background=\'var(--surface-2)\'" onmouseout="this.style.background=\'\'">'+inner+'</td>';
     }).join('');
-    return '<tr class="weekly-emp-row" data-emp-id="'+emp.id+'"><td class="weekly-emp-name-cell" style="padding:8px 14px;border:1px solid var(--border);white-space:nowrap;position:sticky;right:0;background:var(--surface);z-index:1;border-right:2px solid var(--border)"><div style="font-weight:600;font-size:13px">'+emp.name+'</div><div class="weekly-emp-hours" style="font-size:11px;color:'+pctCol+';margin-top:2px">'+totalH+'h / '+availH+'h</div></td>'+cells+'</tr>';
+    return '<tr class="weekly-emp-row" data-emp-id="'+emp.id+'"><td class="weekly-emp-name-cell" style="padding:8px 14px;border:1px solid var(--border);white-space:nowrap;position:sticky;inset-inline-start:0;background:var(--surface);z-index:1;border-inline-end:2px solid var(--border)"><div style="font-weight:600;font-size:13px">'+emp.name+'</div><div class="weekly-emp-hours" style="font-size:11px;color:'+pctCol+';margin-top:2px">'+totalH+'h / '+availH+'h</div></td>'+cells+'</tr>';
   }).join('');
 
   return `
   <div id="weekly-page" class="page-hd flex items-c just-b" style="margin-bottom:12px">
     <div>
-      <div class="page-title" id="weekly-title">סידור שבועי</div>
-      <div class="page-sub" id="weekly-sub">${ml} | ${emps.length} עובדים | ${weeks.length} שבועות</div>
+      <div class="page-title" id="weekly-title">${t('weekly.title')}</div>
+      <div class="page-sub" id="weekly-sub">${t('weekly.sub').replace('{month}',ml).replace('{empCount}',emps.length).replace('{weekCount}',weeks.length)}</div>
     </div>
     <div id="weekly-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-s btn-sm" id="btn-clear-weekly" onclick="clearWeeklySchedule('${mk}')">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="1,3 11,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 3V2h4v1M2 3l.7 7.3A1 1 0 0 0 3.7 11h4.6a1 1 0 0 0 1-.7L10 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        נקה סידור
+        ${t('weekly.clear')}
       </button>
       <button class="btn btn-s btn-sm" id="btn-auto-weekly" onclick="autoWeeklyDistribute('${mk}')">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M4 6h4M6 4v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        פיזור אוטומטי
+        ${t('weekly.autoDistribute')}
       </button>
     </div>
   </div>
   <div id="weekly-week-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-    <span style="font-size:11px;color:var(--muted);font-weight:600;margin-left:4px">שבועות:</span>
+    <span style="font-size:11px;color:var(--muted);font-weight:600;margin-inline-end:4px">${t('weekly.weeks')}</span>
     ${tabs}
   </div>
-  <div id="weekly-hint" style="font-size:11px;color:var(--muted);margin-bottom:8px">לחץ על תא לעריכה • גבול כתום = עריכה ידנית</div>
+  <div id="weekly-hint" style="font-size:11px;color:var(--muted);margin-bottom:8px">${t('weekly.hint')} • ${t('weekly.editNote')}</div>
   <div id="weekly-tbl-wrap" style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)">
     <table id="weekly-tbl" style="border-collapse:collapse;width:100%">
       <thead><tr>
-        <th class="weekly-emp-hd" style="padding:8px 14px;text-align:right;background:var(--surface-2);border:1px solid var(--border);font-size:12px;position:sticky;right:0;z-index:2;white-space:nowrap;border-right:2px solid var(--border)">עובד</th>
+        <th class="weekly-emp-hd" style="padding:8px 14px;text-align:start;background:var(--surface-2);border:1px solid var(--border);font-size:12px;position:sticky;inset-inline-start:0;z-index:2;white-space:nowrap;border-inline-end:2px solid var(--border)">${t('weekly.employee')}</th>
         ${colHeaders}
       </tr></thead>
       <tbody id="weekly-tbody">${rows}</tbody>

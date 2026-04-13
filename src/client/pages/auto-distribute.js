@@ -4,6 +4,7 @@ import { getClientHours, getEmpHours } from '../working-days.js';
 import { getEmpAllocated } from '../aggregations.js';
 import { mkLabel } from '../utils.js';
 import { renderPage } from '../router.js';
+import { t } from '../i18n.js';
 
 // ===================== AUTO-DISTRIBUTE =====================
 // Splits `total` (floored to nearest 5) proportionally by weights.
@@ -23,7 +24,7 @@ export function _split5(weights, total){
 
 export function autoDistribute(mk){
   const visEmps=state.employees.filter(e=>e.visible!==false);
-  if(!visEmps.length){alert('אין עובדים פעילים במטריצה. סמן עובדים בצ׳קבוקס.');return;}
+  if(!visEmps.length){alert(t('autoDist.noEmps'));return;}
 
   const clients=state.clients.filter(c=>c.active!==false&&c.type!=='internal'&&getClientHours(c,mk)>0)
     .sort((a,b)=>{
@@ -31,8 +32,8 @@ export function autoDistribute(mk){
       if(aR!==bR) return aR-bR;
       return getClientHours(b,mk)-getClientHours(a,mk);
     });
-  if(!clients.length){alert('אין לקוחות עם שעות בחודש זה. הגדר שעות ללקוחות תחילה.');return;}
-  if(!confirm(`פיזור אוטומטי ל-${mkLabel(mk)}: יאפס את ההקצאות ל-${visEmps.length} עובדים ויפזר לפי לקוחות קבועים. להמשיך?`)) return;
+  if(!clients.length){alert(t('autoDist.noClients'));return;}
+  if(!confirm(t('autoDist.confirm').replace('{month}',mkLabel(mk)).replace('{count}',visEmps.length))) return;
 
   // ── init ──
   if(!state.matrix[mk]) state.matrix[mk]={};
@@ -81,9 +82,9 @@ export function autoDistribute(mk){
   const clientsCovered=clients.filter(c=>clientRem[c.id]<5).length;
   const empsWithGap=visEmps.filter(e=>rem[e.id]>=5);
   setTimeout(()=>{
-    let msg=`פיזור אוטומטי הושלם!\n\nלקוחות שכוסו במלואם: ${clientsCovered}/${clients.length}\nשעות לקוחות שהוקצו: ${totalAssigned}h מתוך ${totalNeeded}h`;
+    let msg=`${t('autoDist.done')}\n\n${t('autoDist.clientsCovered')} ${clientsCovered}/${clients.length}\n${t('autoDist.hoursAllocated')} ${totalAssigned}h ${t('autoDist.outOf')} ${totalNeeded}h`;
     if(empsWithGap.length)
-      msg+=`\n\nעובדים עם שעות פנויות לעדכון ידני (${empsWithGap.length}):\n`+
+      msg+=`\n\n${t('autoDist.empsWithGap')} (${empsWithGap.length}):\n`+
            empsWithGap.map(e=>`• ${e.name}: ${rem[e.id]}h`).join('\n');
     alert(msg);
   },100);

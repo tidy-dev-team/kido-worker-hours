@@ -15,7 +15,7 @@ async function authPlugin(fastify) {
     if (!valid) return reply.code(401).send({ error: 'Invalid credentials' });
 
     req.session.userId = user.id;
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+    return { id: user.id, name: user.name, email: user.email, role: user.role, preferredLanguage: user.preferred_language || 'he' };
   });
 
   // POST /api/auth/logout
@@ -28,7 +28,7 @@ async function authPlugin(fastify) {
   fastify.get('/api/auth/me', async (req, reply) => {
     const user = getSessionUser(req);
     if (!user) return reply.code(401).send({ error: 'Not authenticated' });
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+    return { id: user.id, name: user.name, email: user.email, role: user.role, preferredLanguage: user.preferred_language || 'he' };
   });
 }
 
@@ -54,5 +54,5 @@ export function requireAdmin(req, reply, done) {
 function getSessionUser(req) {
   const userId = req.session?.userId;
   if (!userId) return null;
-  return db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(userId) || null;
+  return db.prepare('SELECT id, name, email, role, preferred_language FROM users WHERE id = ?').get(userId) || null;
 }

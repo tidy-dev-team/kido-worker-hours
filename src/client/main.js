@@ -2,13 +2,14 @@ import 'chart.js/auto';
 import './style.css';
 
 import { api, setLoginHandler } from './api.js';
-import { loadState } from './state.js';
+import { state, loadState } from './state.js';
+import { t, setLang, getLang } from './i18n.js';
 import { navigate, onMonthChange, setRenderers, renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView } from './router.js';
 import { initMonthSelect, closeModal, mkKey } from './utils.js';
 
 import { renderOverview, initCharts } from './pages/overview.js';
 import { renderClients, updateClientHours, deleteClient, toggleClientActive, openClientModal, toggleClientTypeFields, applyToAllMonths, saveClient } from './pages/clients.js';
-import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHours, updateEmpVacDays, resetEmpHours, deleteEmployee, sendAllocation, sendSlackMsg, sendAllAllocations, sendAllEmails, sendAllSlack, openEmpModal, updateScopePreview, saveEmployee, openClientModalFromEmp, openNewMonthModal, openMonthSetupModal, updateVacPreview, onMsDaysChange, addVacRow, activateVacRow, removeVacRow, addNewClientForm, removeClientForm, toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay } from './pages/employees.js';
+import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHours, updateEmpVacDays, resetEmpHours, deleteEmployee, sendAllocation, buildAllocationMsg, sendSlackMsg, sendAllAllocations, sendAllEmails, sendAllSlack, openEmpModal, updateScopePreview, saveEmployee, openClientModalFromEmp, openNewMonthModal, openMonthSetupModal, updateVacPreview, onMsDaysChange, addVacRow, activateVacRow, removeVacRow, addNewClientForm, removeClientForm, toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay } from './pages/employees.js';
 import { renderMatrix, onMatrixInput, onMatrixChange, copyAllocations, resetMonth } from './pages/matrix.js';
 import { autoDistribute } from './pages/auto-distribute.js';
 import { renderWeeklySchedule, clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient } from './pages/weekly-schedule.js';
@@ -19,12 +20,13 @@ setRenderers({ renderOverview, initCharts, renderClients, renderEmployees, rende
 
 // Expose all handler functions called from inline onclick/oninput/onchange in rendered HTML
 Object.assign(window, {
+  state,
   navigate, onMonthChange,
   closeModal, mkKey,
   updateClientHours, deleteClient, toggleClientActive, openClientModal,
   toggleClientTypeFields, applyToAllMonths, saveClient,
   toggleEmpVisibility, toggleAllEmployees, updateEmpHours, updateEmpVacDays,
-  resetEmpHours, deleteEmployee, sendAllocation, sendSlackMsg, sendAllAllocations,
+  resetEmpHours, deleteEmployee, sendAllocation, buildAllocationMsg, sendSlackMsg, sendAllAllocations,
   sendAllEmails, sendAllSlack, openEmpModal, updateScopePreview, saveEmployee,
   openClientModalFromEmp,
   openNewMonthModal, openMonthSetupModal, updateVacPreview, onMsDaysChange,
@@ -32,7 +34,7 @@ Object.assign(window, {
   toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay,
   onMatrixInput, onMatrixChange, copyAllocations, resetMonth, autoDistribute,
   clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient,
-  deleteMonth, exportMonthsToExcel, exportToJSON,
+  deleteMonth, exportMonthsToExcel, exportToJSON, changeLang,
   renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView,
   logout,
 });
@@ -51,20 +53,20 @@ function showLogin(errorMsg) {
           </div>
           <div>
             <div style="font-weight:700;font-size:16px">WorkHours</div>
-            <div style="font-size:12px;color:var(--muted)">ניהול שעות עבודה</div>
+            <div style="font-size:12px;color:var(--muted)">${t('app.logoSub')}</div>
           </div>
         </div>
         <form id="login-form" style="display:flex;flex-direction:column;gap:14px">
           <div class="fg">
-            <label class="fl">אימייל</label>
+            <label class="fl">${t('login.email')}</label>
             <input id="login-email" type="email" class="fi" placeholder="your@email.com" autocomplete="email" required>
           </div>
           <div class="fg">
-            <label class="fl">סיסמה</label>
+            <label class="fl">${t('login.password')}</label>
             <input id="login-password" type="password" class="fi" placeholder="••••••••" autocomplete="current-password" required>
           </div>
           ${errorMsg ? `<div id="login-error" style="color:var(--danger);font-size:13px;text-align:center">${errorMsg}</div>` : ''}
-          <button type="submit" id="btn-login" class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px">כניסה</button>
+          <button type="submit" id="btn-login" class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px">${t('login.submit')}</button>
         </form>
       </div>
     </div>`;
@@ -82,7 +84,7 @@ function showLogin(errorMsg) {
       document.getElementById('app').innerHTML = _appHTML;
       await init();
     } catch {
-      showLogin('אימייל או סיסמה שגויים');
+      showLogin(t('login.error'));
     }
   });
 
@@ -99,14 +101,45 @@ setLoginHandler(showLogin);
 
 // ─── App init ─────────────────────────────────────────────────────────────────
 
+function updateNavText() {
+  const map = {overview:'nav.overview',clients:'nav.clients',employees:'nav.employees',matrix:'nav.matrix',weekly:'nav.weekly',settings:'nav.settings'};
+  Object.entries(map).forEach(([page,key])=>{
+    const el=document.getElementById('nav-'+page);
+    if(el){
+      const svg=el.querySelector('svg');
+      el.textContent='';
+      if(svg)el.appendChild(svg);
+      el.appendChild(document.createTextNode(' '+t(key)));
+    }
+  });
+  const logoS=document.querySelector('.s-logo-s');if(logoS)logoS.textContent=t('app.subtitle');
+  const monthLbl=document.querySelector('.s-month label');if(monthLbl)monthLbl.textContent=t('nav.month');
+  const newMonthBtn=document.getElementById('btn-new-month');
+  if(newMonthBtn){const svg=newMonthBtn.querySelector('svg');const txt=t('nav.newMonth');newMonthBtn.textContent='';if(svg)newMonthBtn.appendChild(svg);newMonthBtn.appendChild(document.createTextNode(' '+txt));}
+  document.title=t('app.title');
+}
+
+async function changeLang(lang) {
+  setLang(lang);
+  await api.put('/api/users/me/language',{language:lang}).catch(()=>{});
+  updateNavText();
+  initMonthSelect();
+  renderPage();
+}
+
 async function init() {
   try {
+    const me = await api.get('/api/auth/me');
+    if (me.preferredLanguage) setLang(me.preferredLanguage);
     await loadState();
+    updateNavText();
     initMonthSelect();
     navigate('overview');
   } catch (e) {
     if (e.message === '401') {
       showLogin();
+    } else {
+      console.error('init() failed:', e);
     }
   }
 }
