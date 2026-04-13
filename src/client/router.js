@@ -1,7 +1,7 @@
 import { state, saveState } from './state.js';
 
 // ===================== ROUTER =====================
-export let currentPage='overview';
+export let currentPage=sessionStorage.getItem('wh_page')||'overview';
 export let _chartInstances={};
 export let _showAll=false;
 export let _clientShowInactive=true;
@@ -26,6 +26,7 @@ export function setRenderers(r){_renderers=r;}
 
 export function navigate(page){
   currentPage=page;
+  sessionStorage.setItem('wh_page',page);
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
   const nav=document.getElementById('nav-'+page);
   if(nav)nav.classList.add('active');

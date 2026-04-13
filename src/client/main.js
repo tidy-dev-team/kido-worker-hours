@@ -134,7 +134,7 @@ async function init() {
     await loadState();
     updateNavText();
     initMonthSelect();
-    navigate('overview');
+    navigate(sessionStorage.getItem('wh_page')||'overview');
   } catch (e) {
     if (e.message === '401') {
       showLogin();
