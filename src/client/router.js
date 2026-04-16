@@ -43,5 +43,6 @@ export function renderPage(){
   else if(currentPage==='employees')el.innerHTML=_renderers.renderEmployees();
   else if(currentPage==='matrix')el.innerHTML=_renderers.renderMatrix();
   else if(currentPage==='weekly')el.innerHTML=_renderers.renderWeeklySchedule();
+  else if(currentPage==='actuals')el.innerHTML=_renderers.renderActuals();
   else if(currentPage==='settings')el.innerHTML=_renderers.renderSettings();
 }

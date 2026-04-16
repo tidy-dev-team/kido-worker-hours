@@ -13,10 +13,11 @@ import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHour
 import { renderMatrix, onMatrixInput, onMatrixChange, copyAllocations, resetMonth } from './pages/matrix.js';
 import { autoDistribute } from './pages/auto-distribute.js';
 import { renderWeeklySchedule, clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient } from './pages/weekly-schedule.js';
+import { renderActuals, syncWrikeData } from './pages/actuals.js';
 import { renderSettings, deleteMonth, exportMonthsToExcel, exportToJSON } from './pages/settings.js';
 
 // Register renderers (breaks circular dep: router can't import pages)
-setRenderers({ renderOverview, initCharts, renderClients, renderEmployees, renderMatrix, renderWeeklySchedule, renderSettings });
+setRenderers({ renderOverview, initCharts, renderClients, renderEmployees, renderMatrix, renderWeeklySchedule, renderActuals, renderSettings });
 
 // Expose all handler functions called from inline onclick/oninput/onchange in rendered HTML
 Object.assign(window, {
@@ -34,7 +35,7 @@ Object.assign(window, {
   toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay,
   onMatrixInput, onMatrixChange, copyAllocations, resetMonth, autoDistribute,
   clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient,
-  deleteMonth, exportMonthsToExcel, exportToJSON, changeLang,
+  deleteMonth, exportMonthsToExcel, exportToJSON, changeLang, syncWrikeData,
   renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView,
   logout,
 });
@@ -102,7 +103,7 @@ setLoginHandler(showLogin);
 // ─── App init ─────────────────────────────────────────────────────────────────
 
 function updateNavText() {
-  const map = {overview:'nav.overview',clients:'nav.clients',employees:'nav.employees',matrix:'nav.matrix',weekly:'nav.weekly',settings:'nav.settings'};
+  const map = {overview:'nav.overview',clients:'nav.clients',employees:'nav.employees',matrix:'nav.matrix',weekly:'nav.weekly',actuals:'nav.reports',settings:'nav.settings'};
   Object.entries(map).forEach(([page,key])=>{
     const el=document.getElementById('nav-'+page);
     if(el){

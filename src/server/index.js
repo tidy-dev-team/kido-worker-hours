@@ -19,6 +19,7 @@ import weeklyRoutes from './routes/weekly.js';
 import usersRoutes from './routes/users.js';
 import exportRoutes from './routes/export.js';
 import notifyRoutes from './routes/notify.js';
+import wrikeRoutes from './routes/wrike.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '4000');
@@ -103,6 +104,7 @@ await fastify.register(weeklyRoutes);
 await fastify.register(usersRoutes);
 await fastify.register(exportRoutes);
 await fastify.register(notifyRoutes);
+await fastify.register(wrikeRoutes);
 
 // SPA fallback — serve index.html for non-API routes (production only)
 if (existsSync(distDir)) {
