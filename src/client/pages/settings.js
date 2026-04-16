@@ -1,11 +1,11 @@
-import { state } from '../state.js';
+import { state, loadMonthsData } from '../state.js';
 import { api } from '../api.js';
 import { mkLabel, clientTypeLabel, initMonthSelect, withLoading } from '../utils.js';
 import { t, getLang } from '../i18n.js';
 import { calcMonthWorkDays, getEmpHours } from '../working-days.js';
 import { getTotalAllocated, getEmpAllocated, getEmpActiveClients } from '../aggregations.js';
 import { navigate } from '../router.js';
-import * as XLSX from 'xlsx';
+// xlsx is loaded dynamically inside exportMonthsToExcel — it's ~400KB and only used on export.
 
 // ===================== SETTINGS PAGE =====================
 export function renderSettings(){
@@ -197,7 +197,7 @@ export async function deleteMonth(mk){
   navigate('settings');
 }
 
-export function exportMonthsToExcel(forceMks){
+export async function exportMonthsToExcel(forceMks){
   let mks;
   if(forceMks){
     mks=Array.isArray(forceMks)?forceMks:[forceMks];
@@ -206,6 +206,9 @@ export function exportMonthsToExcel(forceMks){
     mks=[...cbs].map(cb=>cb.value);
     if(!mks.length){alert(t('settings.noExportSelected'));return;}
   }
+
+  // Ensure per-month data is loaded for every month being exported, and lazy-load xlsx.
+  const [XLSX] = await Promise.all([import('xlsx'), loadMonthsData(mks)]);
 
   const wb=XLSX.utils.book_new();
 

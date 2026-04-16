@@ -1,4 +1,4 @@
-import { state, saveState } from './state.js';
+import { state, saveState, loadMonthData } from './state.js';
 
 // ===================== ROUTER =====================
 export let currentPage=sessionStorage.getItem('wh_page')||'overview';
@@ -32,7 +32,13 @@ export function navigate(page){
   if(nav)nav.classList.add('active');
   renderPage();
 }
-export function onMonthChange(v){state.currentMonth=v;_matrixFocusEmp=null;saveState();renderPage();}
+export async function onMonthChange(v){
+  state.currentMonth=v;
+  _matrixFocusEmp=null;
+  saveState();
+  await loadMonthData(v);
+  renderPage();
+}
 
 export function renderPage(){
   Object.values(_chartInstances).forEach(ch=>{try{ch.destroy();}catch(e){}});

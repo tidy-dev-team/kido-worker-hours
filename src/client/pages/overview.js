@@ -1,4 +1,3 @@
-import Chart from 'chart.js/auto';
 import { MONTHS } from '../constants.js';
 import { state } from '../state.js';
 import { getHolidays } from '../hebrew-calendar.js';
@@ -440,7 +439,16 @@ export function generateBizInsights(mk){
   </div>`
 }
 
-export function initCharts(){
+let _chartLib=null;
+function loadChartLib(){
+  if(!_chartLib)_chartLib=import('chart.js/auto').then(m=>m.default);
+  return _chartLib;
+}
+
+export async function initCharts(){
+  const Chart=await loadChartLib();
+  // If the user navigated away while chart.js was loading, canvases are gone — bail out.
+  if(!document.getElementById('ch-alloc')&&!document.getElementById('ch-type')&&!document.getElementById('ch-trend'))return;
   const m=state.currentMonth;
   const isRtl=getLang()==='he';
   Chart.defaults.font.family='-apple-system,"Segoe UI",Arial,sans-serif';

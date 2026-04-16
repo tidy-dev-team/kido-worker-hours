@@ -456,6 +456,13 @@ const he = {
   'reports.unmatchedFolders': 'תיקיות Wrike ללא התאמה',
   'reports.unmatchedWrikeUsers': 'משתמשי Wrike ללא התאמה לעובדים',
   'reports.error': 'שגיאה',
+  'reports.mapping': 'מיפוי משתמשי Wrike',
+  'reports.mappingHint': 'שייך משתמשי Wrike לעובדים כדי לראות שעות נכונות',
+  'reports.wrikeContact': 'Wrike',
+  'reports.localEmployee': 'עובד מקומי',
+  'reports.noEmployee': '— ללא שיוך —',
+  'reports.saveMappings': 'שמור מיפויים',
+  'reports.mappingsSaved': 'המיפויים נשמרו',
 };
 
 const en = {
@@ -914,6 +921,13 @@ const en = {
   'reports.unmatchedFolders': 'Unmatched Wrike folders',
   'reports.unmatchedWrikeUsers': 'Wrike users without employee match',
   'reports.error': 'Error',
+  'reports.mapping': 'Wrike User Mapping',
+  'reports.mappingHint': 'Map Wrike contacts to local employees to see correct hours',
+  'reports.wrikeContact': 'Wrike contact',
+  'reports.localEmployee': 'Local employee',
+  'reports.noEmployee': '— no match —',
+  'reports.saveMappings': 'Save mappings',
+  'reports.mappingsSaved': 'Mappings saved',
 };
 
 let _lang = 'he';

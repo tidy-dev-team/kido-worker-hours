@@ -52,6 +52,36 @@ export default async function wrikeRoutes(fastify) {
     return { configured: !!WRIKE_TOKEN() };
   });
 
+  // List Wrike contacts vs local employees for manual mapping
+  fastify.get('/api/wrike/contacts', { preHandler: requireAuth }, async (req, reply) => {
+    const token = WRIKE_TOKEN();
+    if (!token) return reply.code(503).send({ error: 'not configured' });
+    const contacts = await wrikeFetchAll('/contacts', token);
+    const employees = db.prepare('SELECT id, name, wrike_contact_id FROM employees WHERE visible = 1').all();
+    return {
+      wrike: contacts.filter(c => c.type !== 'Group').map(c => ({ id: c.id, name: `${c.firstName} ${c.lastName}`.trim() })).sort((a,b) => a.name.localeCompare(b.name)),
+      local: employees.map(e => ({ id: e.id, name: e.name, wrikeContactId: e.wrike_contact_id || null })).sort((a,b) => a.name.localeCompare(b.name)),
+    };
+  });
+
+  // Save all Wrike contact → employee mappings at once
+  // Body: { mappings: [{wrikeContactId, employeeId}] }
+  fastify.put('/api/wrike/contacts/map', { preHandler: requireAuth }, async (req, reply) => {
+    const { mappings } = req.body || {};
+    if (!Array.isArray(mappings)) return reply.code(400).send({ error: 'mappings array required' });
+    const save = db.transaction(() => {
+      // Clear all existing wrike_contact_id assignments
+      db.prepare('UPDATE employees SET wrike_contact_id = NULL').run();
+      // Set new assignments
+      const stmt = db.prepare('UPDATE employees SET wrike_contact_id = ? WHERE id = ?');
+      for (const { wrikeContactId, employeeId } of mappings) {
+        if (employeeId && wrikeContactId) stmt.run(wrikeContactId, employeeId);
+      }
+    });
+    save();
+    return { ok: true };
+  });
+
   // Debug: raw Wrike data for a month — shows first timelog, its task, and task's folders
   fastify.get('/api/wrike/debug', { preHandler: requireAuth }, async (req, reply) => {
     const token = WRIKE_TOKEN();
@@ -87,15 +117,11 @@ export default async function wrikeRoutes(fastify) {
 
     try {
       const contacts = await wrikeFetchAll('/contacts', token);
-      fastify.log.info(`[wrike] contacts: ${contacts.length}`);
 
       const dateFilter = JSON.stringify({ start: startDate, end: endDate });
       const timelogs = await wrikeFetchAll(`/timelogs?trackedDate=${encodeURIComponent(dateFilter)}`, token);
-      fastify.log.info(`[wrike] timelogs: ${timelogs.length}, sample keys: ${timelogs[0] ? Object.keys(timelogs[0]).join(',') : 'none'}`);
-      if (timelogs[0]) fastify.log.info(`[wrike] sample timelog: ${JSON.stringify(timelogs[0])}`);
 
       const taskIds = [...new Set(timelogs.map(t => t.taskId).filter(Boolean))];
-      fastify.log.info(`[wrike] unique taskIds: ${taskIds.length} (${timelogs.filter(t=>!t.taskId).length} timelogs have no taskId)`);
       const tasks = [];
       for (let i = 0; i < taskIds.length; i += 100) {
         const batch = taskIds.slice(i, i + 100).join(',');
@@ -106,23 +132,24 @@ export default async function wrikeRoutes(fastify) {
           tasks.push(...rest);
         }
       }
-      fastify.log.info(`[wrike] tasks fetched: ${tasks.length}, sample parentIds: ${JSON.stringify(tasks[0]?.parentIds)}, superParentIds: ${JSON.stringify(tasks[0]?.superParentIds)}`);
 
       const allFolderIds = [...new Set(tasks.flatMap(t => [...(t.parentIds || []), ...(t.superParentIds || [])]))];
-      fastify.log.info(`[wrike] unique folderIds: ${allFolderIds.length}`);
       const folders = [];
       for (let i = 0; i < allFolderIds.length; i += 100) {
         const batch = allFolderIds.slice(i, i + 100).join(',');
         const batchFolders = await wrikeFetch(`/folders/${batch}`, token);
         if (batchFolders.data) folders.push(...batchFolders.data);
       }
-      fastify.log.info(`[wrike] folders fetched: ${folders.length}, titles: ${folders.slice(0,10).map(f=>f.title).join(' | ')}`);
 
       const contactMap = new Map(contacts.map(c => [c.id, c]));
       const folderMap = new Map(folders.map(f => [f.id, f]));
 
-      const employees = db.prepare('SELECT id, name FROM employees').all();
+      const employees = db.prepare('SELECT id, name, wrike_contact_id FROM employees').all();
       const clients = db.prepare('SELECT id, name FROM clients').all();
+      // Build Wrike contact ID → employee map for direct matching
+      const wrikeIdToEmp = new Map(
+        employees.filter(e => e.wrike_contact_id).map(e => [e.wrike_contact_id, e])
+      );
 
       const matchedEmps = new Map();
       const matchedClients = new Map();
@@ -144,7 +171,9 @@ export default async function wrikeRoutes(fastify) {
 
         const empKey = contact?.id || tl.userId;
         if (!matchedEmps.has(empKey)) {
-          const match = contact ? fuzzyMatch(`${contact.firstName} ${contact.lastName}`.trim(), employees) : null;
+          // Try direct wrike_contact_id match first, then fuzzy name match as fallback
+          const directMatch = wrikeIdToEmp.get(empKey) || null;
+          const match = directMatch || (contact ? fuzzyMatch(`${contact.firstName} ${contact.lastName}`.trim(), employees) : null);
           matchedEmps.set(empKey, {
             wrikeId: empKey,
             wrikeName,
@@ -192,7 +221,7 @@ export default async function wrikeRoutes(fastify) {
         }
         employeeResults.push({
           ...empInfo,
-          totalHours,
+          totalHours: Math.round(totalHours * 10) / 10,
           clients: clientHours,
         });
         if (!empInfo.matchedEmpId) {
