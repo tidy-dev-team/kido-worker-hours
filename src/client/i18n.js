@@ -418,7 +418,7 @@ const he = {
   'settings.langHe': 'עברית',
   'settings.langEn': 'English',
 
-  // ── Excel export headers ──
+// ── Excel export headers ──
   'excel.monthlySummary': 'סיכום חודשי',
   'excel.empDetails': 'פירוט עובדים',
   'excel.clientDetails': 'פירוט לקוחות',
@@ -433,10 +433,36 @@ const he = {
   'excel.employee': 'עובד',
   'excel.role': 'תפקיד',
   'excel.capacityH': 'שעות קיבולת',
-  'excel.vacDays': 'ימי חופש',
+  'excel.vacDays': 'ימי חופשה',
   'excel.activeClientsCount': 'לקוחות פעילים',
   'excel.client': 'לקוח',
   'excel.type': 'סוג',
+
+  // ── Time Reports (Wrike) ──
+  'nav.reports': 'דו״ח שעות',
+  'reports.title': 'דו״ח שעות בפועל',
+  'reports.sub': '{month} — נתונים מ-Wrike',
+  'reports.loading': 'מסנכרן נתונים מ-Wrike…',
+  'reports.emptyState': 'לחץ על סנכרון לטעינת נתוני שעות מ-Wrike',
+  'reports.syncNow': 'סנכרון מ-Wrike',
+  'reports.resync': 'סנכרון מחדש',
+  'reports.wrikeUsers': 'משתמשי Wrike',
+  'reports.matched': 'תואמים',
+  'reports.employee': 'עובד',
+  'reports.total': 'סה״כ',
+  'reports.synced': '✓ מסונכרן',
+  'reports.noMatch': 'לא תואם',
+  'reports.unmatchedContacts': 'משתמשי Wrike ללא התאמה',
+  'reports.unmatchedFolders': 'תיקיות Wrike ללא התאמה',
+  'reports.unmatchedWrikeUsers': 'משתמשי Wrike ללא התאמה לעובדים',
+  'reports.error': 'שגיאה',
+  'reports.mapping': 'מיפוי משתמשי Wrike',
+  'reports.mappingHint': 'שייך משתמשי Wrike לעובדים כדי לראות שעות נכונות',
+  'reports.wrikeContact': 'Wrike',
+  'reports.localEmployee': 'עובד מקומי',
+  'reports.noEmployee': '— ללא שיוך —',
+  'reports.saveMappings': 'שמור מיפויים',
+  'reports.mappingsSaved': 'המיפויים נשמרו',
 };
 
 const en = {
@@ -876,6 +902,32 @@ const en = {
   'excel.activeClientsCount': 'Active Clients',
   'excel.client': 'Client',
   'excel.type': 'Type',
+
+  // ── Time Reports (Wrike) ──
+  'nav.reports': 'Time Reports',
+  'reports.title': 'Actual Hours',
+  'reports.sub': '{month} — data from Wrike',
+  'reports.loading': 'Syncing data from Wrike…',
+  'reports.emptyState': 'Click Sync to load actual hours from Wrike',
+  'reports.syncNow': 'Sync from Wrike',
+  'reports.resync': 'Re-sync',
+  'reports.wrikeUsers': 'Wrike users',
+  'reports.matched': 'matched',
+  'reports.employee': 'Employee',
+  'reports.total': 'Total',
+  'reports.synced': '✓ synced',
+  'reports.noMatch': 'no match',
+  'reports.unmatchedContacts': 'Unmatched Wrike contacts',
+  'reports.unmatchedFolders': 'Unmatched Wrike folders',
+  'reports.unmatchedWrikeUsers': 'Wrike users without employee match',
+  'reports.error': 'Error',
+  'reports.mapping': 'Wrike User Mapping',
+  'reports.mappingHint': 'Map Wrike contacts to local employees to see correct hours',
+  'reports.wrikeContact': 'Wrike contact',
+  'reports.localEmployee': 'Local employee',
+  'reports.noEmployee': '— no match —',
+  'reports.saveMappings': 'Save mappings',
+  'reports.mappingsSaved': 'Mappings saved',
 };
 
 let _lang = 'he';
