@@ -13,6 +13,32 @@ export const state = {
   weeklySchedule: {},
 };
 
+const _monthPromises = {};
+
+// Fetch per-month data on demand. Idempotent — concurrent / repeat calls share one request.
+export function loadMonthData(mk) {
+  if (!mk) return Promise.resolve();
+  if (_monthPromises[mk]) return _monthPromises[mk];
+  if (state.matrix[mk] !== undefined) return Promise.resolve();
+  const p = (async () => {
+    const [matrix, vacations, weekly] = await Promise.all([
+      api.get(`/api/matrix/${mk}`),
+      api.get(`/api/vacations/${mk}`),
+      api.get(`/api/weekly/${mk}`),
+    ]);
+    state.matrix[mk] = matrix;
+    state.vacations[mk] = vacations;
+    state.weeklySchedule[mk] = weekly;
+  })();
+  _monthPromises[mk] = p;
+  p.catch(() => { delete _monthPromises[mk]; });
+  return p;
+}
+
+export function loadMonthsData(mks) {
+  return Promise.all((mks || []).map(loadMonthData));
+}
+
 export async function loadState() {
   const [clients, employees, months] = await Promise.all([
     api.get('/api/clients'),
@@ -32,23 +58,12 @@ export async function loadState() {
     state.currentMonth = state.activeMonths[state.activeMonths.length - 1] || '';
   }
 
-  // Fetch per-month data for all active months in parallel
   state.matrix = {};
   state.vacations = {};
   state.weeklySchedule = {};
 
-  if (state.activeMonths.length > 0) {
-    await Promise.all(state.activeMonths.map(async mk => {
-      const [matrix, vacations, weekly] = await Promise.all([
-        api.get(`/api/matrix/${mk}`),
-        api.get(`/api/vacations/${mk}`),
-        api.get(`/api/weekly/${mk}`),
-      ]);
-      state.matrix[mk] = matrix;
-      state.vacations[mk] = vacations;
-      state.weeklySchedule[mk] = weekly;
-    }));
-  }
+  // Block only on the current month — other months prefetch in background (see main.js)
+  if (state.currentMonth) await loadMonthData(state.currentMonth);
 }
 
 // No-op — data is persisted via specific API calls in page modules

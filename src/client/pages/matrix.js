@@ -1,5 +1,5 @@
 import { MONTHS } from '../constants.js';
-import { state, saveState } from '../state.js';
+import { state, saveState, loadMonthData } from '../state.js';
 import { api } from '../api.js';
 import { getClientHours, getEmpHours } from '../working-days.js';
 import { getTotalAllocated, getClientAllocated, getEmpAllocated, getEmpActiveClients } from '../aggregations.js';
@@ -269,8 +269,9 @@ export function onMatrixChange(inp,mk){
   });
 }
 
-export function copyAllocations(fromMk,toMk){
-  if(!state.matrix[fromMk]){alert(t('matrix.noData'));return;}
+export async function copyAllocations(fromMk,toMk){
+  await loadMonthData(fromMk);
+  if(!state.matrix[fromMk]||!Object.keys(state.matrix[fromMk]).length){alert(t('matrix.noData'));return;}
   state.matrix[toMk]=JSON.parse(JSON.stringify(state.matrix[fromMk]));
   api.put(`/api/matrix/${toMk}`,state.matrix[toMk]);
   renderPage();

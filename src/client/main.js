@@ -1,8 +1,7 @@
-import 'chart.js/auto';
 import './style.css';
 
 import { api, setLoginHandler } from './api.js';
-import { state, loadState } from './state.js';
+import { state, loadState, loadMonthsData } from './state.js';
 import { t, setLang, getLang } from './i18n.js';
 import { navigate, onMonthChange, setRenderers, renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView } from './router.js';
 import { initMonthSelect, closeModal, mkKey } from './utils.js';
@@ -13,10 +12,11 @@ import { renderEmployees, toggleEmpVisibility, toggleAllEmployees, updateEmpHour
 import { renderMatrix, onMatrixInput, onMatrixChange, copyAllocations, resetMonth } from './pages/matrix.js';
 import { autoDistribute } from './pages/auto-distribute.js';
 import { renderWeeklySchedule, clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient } from './pages/weekly-schedule.js';
+import { renderActuals, syncWrikeData, openWrikeMapping, closeWrikeMapping, saveWrikeMappings, onWrikeMonthChange } from './pages/actuals.js';
 import { renderSettings, deleteMonth, exportMonthsToExcel, exportToJSON } from './pages/settings.js';
 
 // Register renderers (breaks circular dep: router can't import pages)
-setRenderers({ renderOverview, initCharts, renderClients, renderEmployees, renderMatrix, renderWeeklySchedule, renderSettings });
+setRenderers({ renderOverview, initCharts, renderClients, renderEmployees, renderMatrix, renderWeeklySchedule, renderActuals, renderSettings });
 
 // Expose all handler functions called from inline onclick/oninput/onchange in rendered HTML
 Object.assign(window, {
@@ -34,7 +34,7 @@ Object.assign(window, {
   toggleNcFields, saveMonthSetup, getEditedMsg, msToggleEditMode, msToggleDay,
   onMatrixInput, onMatrixChange, copyAllocations, resetMonth, autoDistribute,
   clearWeeklySchedule, autoWeeklyDistribute, wsShowPopover, wsToggleClient,
-  deleteMonth, exportMonthsToExcel, exportToJSON, changeLang,
+  deleteMonth, exportMonthsToExcel, exportToJSON, changeLang, syncWrikeData, openWrikeMapping, closeWrikeMapping, saveWrikeMappings, onWrikeMonthChange,
   renderPage, setMatrixView, setMatrixFocusEmp, setWeeklyWeekIdx, setClientShowInactive, setEmpView,
   logout,
 });
@@ -102,7 +102,7 @@ setLoginHandler(showLogin);
 // ─── App init ─────────────────────────────────────────────────────────────────
 
 function updateNavText() {
-  const map = {overview:'nav.overview',clients:'nav.clients',employees:'nav.employees',matrix:'nav.matrix',weekly:'nav.weekly',settings:'nav.settings'};
+  const map = {overview:'nav.overview',clients:'nav.clients',employees:'nav.employees',matrix:'nav.matrix',weekly:'nav.weekly',actuals:'nav.reports',settings:'nav.settings'};
   Object.entries(map).forEach(([page,key])=>{
     const el=document.getElementById('nav-'+page);
     if(el){
@@ -135,6 +135,12 @@ async function init() {
     updateNavText();
     initMonthSelect();
     navigate(sessionStorage.getItem('wh_page')||'overview');
+    // Background-load remaining months (for trend/insights/settings/export). Re-render when done
+    // so overview's trend chart and historical insights fill in without blocking first paint.
+    const others = (state.activeMonths||[]).filter(m => m !== state.currentMonth);
+    if (others.length) {
+      loadMonthsData(others).then(() => renderPage()).catch(e => console.warn('prefetch failed', e));
+    }
   } catch (e) {
     if (e.message === '401') {
       showLogin();

@@ -21,4 +21,9 @@ if (!cols.includes('preferred_language')) {
   db.exec("ALTER TABLE users ADD COLUMN preferred_language TEXT NOT NULL DEFAULT 'he'");
 }
 
+const empCols = db.prepare("PRAGMA table_info(employees)").all().map(c => c.name);
+if (!empCols.includes('wrike_contact_id')) {
+  db.exec("ALTER TABLE employees ADD COLUMN wrike_contact_id TEXT DEFAULT NULL");
+}
+
 export default db;
